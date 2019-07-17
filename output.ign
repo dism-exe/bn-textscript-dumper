@@ -1,0 +1,482 @@
+0x50 0x160 0x192 0x2a4 0x34c 0x34c 0x34c 0x34c 0x34c 0x34c 0x34c 0x37c 0x3a6 0x3cf 0x3fc 0x3fc 0x448 0x478 0x4a2 0x4cf 0x4cf 0x513 0x5c2 0x615 0x643 0x670 0x6c1 0x6ec 0x719 0x78e 0x7cd 0x807 0x85e 0x891 0x8d1 0x8fe 0x9c8 0x9f5 0xd11 0xde5 
+error: could not find number of parameters for  b'\xf7\xf0;\xf0\x01'
+    text_script_start unk_6D5708
+    
+text_script_rel_pointers 0, 1, 2, 3, 4, 4, 4, 4, 4, 4, 4, 11, 12, 13, 14, 14
+text_script_rel_pointers 16, 17, 18, 19, 19, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+text_script_rel_pointers 32, 33, 34, 35, 36, 37, 38, 39
+    text_script 0, scr_0
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string "This is the Navi\n"
+        .string "Customizer screen."
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "The NetNavi program\n"
+        .string ""MegaMan.EXE" is\n"
+        .string "now on standby..."
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "In other words,\n"
+        .string "he's asleep."
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "During standby,\n"
+        .string "you can install"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "programs,customizing\n"
+        .string "MegaMan's abilities."
+        ts_key_wait 0x0
+        ts_clear_msg 
+        ts_flag_set 0xEE, 0x0
+        .string "Customization is\n"
+        .string "performed on this\n"
+        .string ""MemoryMap"..."
+        ts_wait_flag 0xEF, 0x0
+        ts_key_wait 0x0
+        ts_wait_hold 0x0, 0x0
+    text_script 1, scr_1
+        ts_call_disable_mugshot_brighten 
+        ts_mugshot_show 0x10
+        ts_msg_open_quick 
+        ts_flag_set 0xEE, 0x0
+        .string "By installing these\n"
+        .string "programs."
+        ts_wait_flag 0xEF, 0x0
+        ts_key_wait 0x0
+        ts_wait_hold 0x0, 0x0
+    text_script 2, scr_2
+        ts_call_disable_mugshot_brighten 
+        ts_mugshot_show 0x10
+        ts_msg_open_quick 
+        .string "Now,let's try\n"
+        .string "installing the\n"
+        .string ""UnderSht"!"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "It allows you to\n"
+        .string "survive a lethal\n"
+        .string "hit."
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "Select "UnderSht"\n"
+        .string "from the top-right\n"
+        .string "window and put it"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "in the MemoryMap."
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "However,there is\n"
+        .string "an important rule\n"
+        .string "you must follow!"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "See the line in\n"
+        .string "the center of \n"
+        .string "the MemoryMap?"
+        ts_key_wait 0x0
+        ts_flag_set 0xEE, 0x0
+        ts_end
+    text_script 3, scr_3
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string "It's called the\n"
+        .string ""Command Line.""
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "Programs must be\n"
+        .string "placed with at least\n"
+        .string "one of their squares"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "on this line.\n"
+        .string "Now,then..."
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "Let's install the\n"
+        .string ""UnderSht"\n"
+        .string "program!"
+        ts_key_wait 0x0
+        ts_end
+    text_script 4, scr_4
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string "Oops! That isn't\n"
+        .string "the "UnderSht"\n"
+        .string "program."
+        ts_key_wait 0x0
+        ts_end
+    text_script 5, scr_5
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string "You don't need\n"
+        .string "to select that now."
+        ts_key_wait 0x0
+        ts_end
+    text_script 6, scr_6
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string "That isn't over\n"
+        .string "the Command Line!"
+        ts_key_wait 0x0
+        ts_end
+    text_script 7, scr_7
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string "Don't place things\n"
+        .string "outside the frame!"
+        ts_key_wait 0x0
+        ts_end
+    text_script 8, scr_8
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string "Good! Now,let's\n"
+        .string "install an\n"
+        .string ""Attack+1" program!"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "Select the program."
+        ts_key_wait 0x0
+        ts_end
+    text_script 9, scr_9
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string "Oops! That isn't\n"
+        .string "the "Attack+1"\n"
+        .string "program!"
+        ts_key_wait 0x0
+        ts_end
+    text_script 10, scr_10
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string "You don't need\n"
+        .string "to select that now."
+        ts_key_wait 0x0
+        ts_end
+    text_script 11, scr_11
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string "There's no need to\n"
+        .string "move that program."
+        ts_key_wait 0x0
+        ts_end
+    text_script 12, scr_12
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string "Now for the second\n"
+        .string "rule. Look at the\n"
+        .string ""Attack+1" program."
+        ts_key_wait 0x0
+        ts_flag_set 0xEE, 0x0
+        ts_end
+    text_script 13, scr_13
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string "See the square\n"
+        .string "patterns? Programs"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "like this are called\n"
+        .string ""Plus Parts" and"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "must not be placed\n"
+        .string "on the Command Line."
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "Now,then...\n"
+        .string "Let's install the\n"
+        .string ""Attack+1" program."
+        ts_key_wait 0x0
+        ts_end
+    text_script 14, scr_14
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string ""Attack+1" is a Plus\n"
+        .string "Parts program,so\n"
+        .string "don't place it"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "on the Command\n"
+        .string "Line."
+        ts_key_wait 0x0
+        ts_end
+    text_script 15, scr_15
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string ""UnderSht" is\n"
+        .string "already installed\n"
+        .string "there!"
+        ts_key_wait 0x0
+        ts_end
+    text_script 16, scr_16
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string "Don't place things\n"
+        .string "outside the frame!"
+        ts_key_wait 0x0
+        ts_end
+    text_script 17, scr_17
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string "Now,let's finish\n"
+        .string "by installing a\n"
+        .string ""Speed+1" program."
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "Select the program."
+        ts_key_wait 0x0
+        ts_end
+    text_script 18, scr_18
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string "There's no need to\n"
+        .string "select that now."
+        ts_key_wait 0x0
+        ts_end
+    text_script 19, scr_19
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string "There's no need to\n"
+        .string "move that program."
+        ts_key_wait 0x0
+        ts_end
+    text_script 20, scr_20
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string "Now,for the third\n"
+        .string "rule. Same-colored"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "programs cannot be\n"
+        .string "placed next to each\n"
+        .string "other!"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "The "UnderSht" and"
+        ts_key_wait 0x0
+        ts_flag_set 0xEE, 0x0
+        ts_end
+    text_script 21, scr_21
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string "the "Speed+1" you\n"
+        .string "have selected are\n"
+        .string "the same-color."
+        ts_key_wait 0x0
+        ts_flag_set 0xEE, 0x0
+        ts_end
+    text_script 22, scr_22
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string "Make sure they\n"
+        .string "don't touch!"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "Install the program."
+        ts_key_wait 0x0
+        ts_end
+    text_script 23, scr_23
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string ""Speed+1" is a\n"
+        .string "Plus Parts program.\n"
+        .string "It must not be"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "placed on the\n"
+        .string "Command Line."
+        ts_key_wait 0x0
+        ts_end
+    text_script 24, scr_24
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string "Another program is\n"
+        .string "already installed\n"
+        .string "there."
+        ts_key_wait 0x0
+        ts_end
+    text_script 25, scr_25
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string "Hey! Same-colored\n"
+        .string "programs cannot be\n"
+        .string "next to each other!"
+        ts_key_wait 0x0
+        ts_end
+    text_script 26, scr_26
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string "Don't place things\n"
+        .string "outside the frame!"
+        ts_key_wait 0x0
+        ts_end
+    text_script 27, scr_27
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string "Now let me tell\n"
+        .string "you about "RUN"!\n"
+        .string "RUN activates"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "MegaMan.EXE. When\n"
+        .string "you press RUN,\n"
+        .string "he will awaken"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "with the powers of\n"
+        .string "the programs you"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "installed on the\n"
+        .string "MemoryMap."
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "Now,then,press\n"
+        .string "RUN and see!"
+        ts_key_wait 0x0
+        ts_end
+    text_script 28, scr_28
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string "There's no need to\n"
+        .string "move that program."
+        ts_key_wait 0x0
+        ts_end
+    text_script 29, scr_29
+        ts_mugshot_show 0x10
+        ts_msg_open 
+        .string "RUN is complete!\n"
+        .string "Check and see\n"
+        .string "how MegaMan is."
+        ts_key_wait 0x0
+        ts_clear_msg 
+        ts_mugshot_show 0x0
+        .string "I hope he's okay...\n"
+        .string "How do you feel?"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        ts_mugshot_show 0x37
+        .string "...U-Uhhh..."
+        ts_key_wait 0x0
+        ts_clear_msg 
+        ts_mugshot_show 0x0
+        .string "MegaMan?\n"
+        .string "MegaMan!?"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        ts_mugshot_show 0x37
+        .string "Oooh... Morning,Lan!\n"
+        .string "All systems go!"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "I feel even more\n"
+        .string "powerful now!"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        ts_mugshot_show 0x0
+        .string "Whew! Hey,don't\n"
+        .string "scare me like that!"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        ts_mugshot_show 0x10
+        .string "Congratulations!\n"
+        .string "If you get a new\n"
+        .string "program,just install"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "it the same way!"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        ts_mugshot_show 0x0
+        .string "All right! I'm going\n"
+        .string "to make MegaMan\n"
+        .string "the best Navi ever!"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        ts_mugshot_show 0x10
+        .string "Just be sure to\n"
+        .string "follow those\n"
+        .string "three rules."
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "Really,make sure!"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "If you don't program\n"
+        .string "correctly,a bug\n"
+        .string "may occur."
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "Oh,and one more\n"
+        .string "thing. You can't"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "install more than 4\n"
+        .string "colors of programs."
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "If you install 5 or\n"
+        .string "more,MegaMan will\n"
+        .string "overload!"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "You could get a bug.\n"
+        .string "So pay attention."
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "The number of colors\n"
+        .string "currently installed"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "is always\n"
+        .string "shown here."
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "Make sure it always\n"
+        .string "stays in the frame."
+        ts_key_wait 0x0
+        ts_flag_set 0xEE, 0x0
+        ts_wait_hold 0x0, 0x0
+    text_script 30, scr_30
+        ts_call_disable_mugshot_brighten 
+        ts_mugshot_show 0x0
+        ts_msg_open_quick 
+        .string "I got it.\n"
+        .string "Thanks a lot!"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        ts_mugshot_show 0x10
+        .string "If there is a bug\n"
+        .string "you should be able\n"
+        .string "to tell on the"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "Emotion Window,so\n"
+        .string "check it when you\n"
+        .string "enter a battle!"
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "This concludes my\n"
+        .string "explanation of the\n"
+        .string "NaviCustomizer."
+        ts_key_wait 0x0
+        ts_clear_msg 
+        .string "Good luck!"
+        ts_key_wait 0x0
+        ts_end
+    text_script 31, scr_31
+        .string "   F[L]3   [L]3 0 1  00\x51 107 5\x7B \x51 \x53 E\xB009l A"
+        ts_jump_random 0x1
+        .string " 0B C 4320G IV0G [BX]\x56\xE0YK L M"
+        ts_jump_random 0x1
+        .string "  N U \x61 \x62\xE2"
+        ts_jump_random 0x1
+        ts_jump_random 0x1
+        .string "\xC0030\x6C v\x6Ds \x6E"
+        ts_jump_random 0x1
+        ts_jump_random 0x1
+        .string "\xC00\x6F \x70"
+0x6d6559
