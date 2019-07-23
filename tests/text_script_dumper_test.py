@@ -5,8 +5,8 @@ from text_script_dumper import *
 class RegressionTests(unittest.TestCase):
     def setUp(self):
         self.test_data_dir = 'test-data/'
-        self.ini_dir = '..' # TODO: read from config file
-        self.rom_path = '../../bn6f/bn6f.gba' # TODO: read this from a config file
+        self.ini_dir = ModuleState.INI_DIR
+        self.rom_path = ModuleState.ROM_PATH
         pass
     def tearDown(self):
         pass
@@ -30,13 +30,15 @@ class RegressionTests(unittest.TestCase):
 
 
     def assertTestFile(self, test_name):
-
         with open(self.test_data_dir + test_name + '.bin', 'rb') as bin_file:
             textScript = TextScript.read_script(0, bin_file, self.ini_dir)
             script, end_addr = textScript.build()
 
-            # for i in script: print(i)
-            # print(hex(end_addr))
+            def print_script(script, end_addr):
+                for i in script: print(i)
+                print(hex(end_addr))
+            # print_script(script, end_addr)
+
             with open(self.test_data_dir + test_name + '.s', 'r', encoding='utf-8') as f:
                 lines = f.readlines()
                 script = '\n'.join(script).split('\n')
@@ -83,6 +85,7 @@ class RegressionTests(unittest.TestCase):
         # tests for printing commands and partial parameter masks
         # tests for alternative commands (requires mmbn6s.ini)
         # tests for dynamic ts_select parameters
+        # tests for     
         self.assertTestFile('TextScriptChipTrader86C580C')
         pass
 
@@ -100,7 +103,7 @@ class RegressionTests(unittest.TestCase):
 
 class CommandIdentificationTess(unittest.TestCase):
     def setUp(self):
-        self.ini_dir = '../' # TODO: read from config file
+        self.ini_dir = ModuleState.INI_DIR
         self.sects = read_custom_ini(self.ini_dir + 'mmbn6.ini')
         self.sects_s = read_custom_ini(self.ini_dir + 'mmbn6s.ini')
 
