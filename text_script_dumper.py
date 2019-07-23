@@ -1,4 +1,3 @@
-# usage: text_script_dumper <address> [<rom_file>] [-i <ini_file>]
 # This will parse a textScript at the address specified, from the file specified.
 # if no file is specified, it will use the default ('../../bn6f.ign')
 # ini_file defaults to 'mmbn6.ini'
@@ -692,74 +691,42 @@ def gen_macros(config_ini_path):
             macros += '.endm\n'
     return macros
 
-def error_print_usage():
-    print('usage: text_script_dumper <address> [-i <rom_file>] [-d <ini_dir>]')
-    exit(0)
+if __name__ == '__main__':
+    import codecs
+    import argparse
 
-def try_parse_int(s, b):
-    try:
-        return int(s, b)
-    except ValueError:
-        return None
+    def auto_int(i):
+        return int(i, 0)
 
-def parse_switch(argv, i, flag):
-    if argv[i] == flag:
-        if len(argv) > i + 1:
-            return argv[i + 1]
-        else:
-            error_print_usage()
-    else:
-        return None
+    # usage: text_script_dumper.py [-h] [-f FILE] [-i INI_DIR] address
+    parser = argparse.ArgumentParser(description='TextScript dumper for Megaman Battle Network')
+    parser.add_argument('address', type=auto_int, help='address of text script archive in file')
+    parser.add_argument('-f', '--file', help='file to parse from, likely the ROM.')
+    parser.add_argument('-i', '--ini_dir', help='directory of command database ini files to use')
+    args = parser.parse_args()
 
-def main(argv):
-
-    if len(argv) < 2:
-        error_print_usage()
-
-    address = try_parse_int(argv[1], 16)
-    if address is None:
-        error_print_usage()
-
-    # parse optional arguments
-    path = ini_dir = ''
-    if len(argv) > 3:
-        for i in range(2,len(argv)):
-            arg = parse_switch(argv, i, '-i')
-            if arg:
-                print(arg)
-                path = arg
-                continue
-            arg = parse_switch(argv, i, '-d')
-            if arg:
-                ini_dir = arg
-                continue
+    # in case the default encoding doesn't support utf8
+    sys.stdout = codecs.getwriter('utf8')(sys.stdout.buffer)
 
     # defaults
-    if not path:
-        path = '../../bn6f.ign'
-    if not ini_dir:
-        ini_dir = './'
-    if ini_dir and ini_dir[-1] != '/':
-        ini_dir = ini_dir + '/'
+    if not args.file:
+        args.file = ModuleState.ROM_PATH
+    if not args.ini_dir:
+        args.ini_dir = ModuleState.INI_DIR
+    if args.ini_dir and args.ini_dir[-1] != '/':
+        args.ini_dir = args.ini_dir + '/'
 
-    with open(path, 'rb') as f:
-        script, end_addr = TextScript.read_script(int(sys.argv[1], 16), f, ini_dir).build()
+    # '6C580C' # TextScriptChipTrader86C580C
+    # '6C67E4' # TextScriptLottery86C67E4
+
+    print(args)
+
+    with open(args.file, 'rb') as f:
+        script, end_addr = TextScript.read_script(args.address, f, args.ini_dir).build()
     for i in script:
         print(i)
     print(hex(end_addr))
     for e in error.list:
         print('error: ' + e)
 
-
-if __name__ == '__main__':
-    import configparser
-    import sys
-    import codecs
-
-    # in case the default encoding doesn't support utf8
-    sys.stdout = codecs.getwriter('utf8')(sys.stdout.buffer)
-
-    # sys.argv[1] = '6C580C' # TextScriptChipTrader86C580C
-    sys.argv[1] = '6C67E4' # TextScriptLottery86C67E4
-
-    main(sys.argv)
+    # main(sys.argv)

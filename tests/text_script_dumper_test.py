@@ -85,7 +85,7 @@ class RegressionTests(unittest.TestCase):
         # tests for printing commands and partial parameter masks
         # tests for alternative commands (requires mmbn6s.ini)
         # tests for dynamic ts_select parameters
-        # tests for     
+        # tests for
         self.assertTestFile('TextScriptChipTrader86C580C')
         pass
 
