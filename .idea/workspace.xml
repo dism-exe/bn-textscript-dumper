@@ -44,7 +44,7 @@
           <file leaf-file-name="test.ign" pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/test.ign">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="238">
+                <state relative-caret-position="0">
                   <caret line="14" column="16" lean-forward="false" selection-start-line="14" selection-start-column="16" selection-end-line="14" selection-end-column="16" />
                   <folding />
                 </state>
@@ -54,8 +54,8 @@
           <file leaf-file-name="text_script_dumper_test.py" pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/tests/text_script_dumper_test.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="1020">
-                  <caret line="60" column="41" lean-forward="true" selection-start-line="60" selection-start-column="41" selection-end-line="60" selection-end-column="41" />
+                <state relative-caret-position="986">
+                  <caret line="60" column="41" lean-forward="false" selection-start-line="60" selection-start-column="41" selection-end-line="60" selection-end-column="41" />
                   <folding>
                     <element signature="e#0#15#0" expanded="true" />
                   </folding>
@@ -66,12 +66,14 @@
           <file leaf-file-name="text_script_dumper.py" pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/text_script_dumper.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="-10202">
-                  <caret line="0" column="18" lean-forward="false" selection-start-line="0" selection-start-column="18" selection-end-line="9" selection-end-column="16" />
+                <state relative-caret-position="423">
+                  <caret line="90" column="34" lean-forward="false" selection-start-line="90" selection-start-column="34" selection-end-line="90" selection-end-column="34" />
                   <folding>
                     <element signature="e#187#220#0" expanded="true" />
-                    <element signature="e#2966#3720#0" expanded="false" />
-                    <element signature="e#4511#7099#0" expanded="false" />
+                    <element signature="e#5112#5866#0" expanded="false" />
+                    <element signature="e#5908#6611#0" expanded="false" />
+                    <element signature="e#6657#9245#0" expanded="false" />
+                    <element signature="e#9338#9747#0" expanded="false" />
                   </folding>
                 </state>
               </provider>
@@ -121,11 +123,11 @@
       </split-first>
       <split-second>
         <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-          <file leaf-file-name="text_script_dumper_test.py" pinned="false" current-in-tab="false">
+          <file leaf-file-name="text_script_dumper_test.py" pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/tests/text_script_dumper_test.py">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="120">
-                  <caret line="77" column="0" lean-forward="true" selection-start-line="77" selection-start-column="0" selection-end-line="77" selection-end-column="0" />
+                <state relative-caret-position="-1549">
+                  <caret line="128" column="35" lean-forward="false" selection-start-line="128" selection-start-column="35" selection-end-line="128" selection-end-column="35" />
                   <folding>
                     <element signature="e#0#15#0" expanded="true" />
                   </folding>
@@ -133,11 +135,11 @@
               </provider>
             </entry>
           </file>
-          <file leaf-file-name="config.ini" pinned="false" current-in-tab="true">
+          <file leaf-file-name="config.ini" pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/config.ini">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="34">
-                  <caret line="2" column="30" lean-forward="false" selection-start-line="2" selection-start-column="30" selection-end-line="2" selection-end-column="30" />
+                <state relative-caret-position="204">
+                  <caret line="12" column="41" lean-forward="false" selection-start-line="12" selection-start-column="41" selection-end-line="12" selection-end-column="41" />
                   <folding />
                 </state>
               </provider>
@@ -167,6 +169,9 @@
       <find>TODO</find>
       <find>size</find>
       <find>print</find>
+      <find>86C580C</find>
+      <find>6C580C</find>
+      <find>prioritize_s</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -176,9 +181,9 @@
     <option name="CHANGED_PATHS">
       <list>
         <option value="$PROJECT_DIR$/TextScript.py" />
+        <option value="$PROJECT_DIR$/config.ini" />
         <option value="$PROJECT_DIR$/tests/text_script_dumper_test.py" />
         <option value="$PROJECT_DIR$/text_script_dumper.py" />
-        <option value="$PROJECT_DIR$/config.ini" />
       </list>
     </option>
   </component>
@@ -202,7 +207,6 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="Scratches" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -225,6 +229,7 @@
           <select />
         </subPane>
       </pane>
+      <pane id="Scratches" />
       <pane id="Scope" />
     </panes>
   </component>
@@ -304,9 +309,6 @@
     <servers />
   </component>
   <component name="TestHistory">
-    <history-entry file="Unittests_in_text_script_dumper_test_py - 2019.07.23 at 14h 16m 45s.xml">
-      <configuration name="Unittests in text_script_dumper_test.py" configurationId="tests" />
-    </history-entry>
     <history-entry file="Unittests_in_text_script_dumper_test_py - 2019.07.23 at 14h 18m 08s.xml">
       <configuration name="Unittests in text_script_dumper_test.py" configurationId="tests" />
     </history-entry>
@@ -334,6 +336,9 @@
     <history-entry file="Unittests_in_text_script_dumper_test_py - 2019.07.23 at 14h 48m 12s.xml">
       <configuration name="Unittests in text_script_dumper_test.py" configurationId="tests" />
     </history-entry>
+    <history-entry file="Unittests_in_text_script_dumper_test_py - 2019.07.27 at 14h 54m 23s.xml">
+      <configuration name="Unittests in text_script_dumper_test.py" configurationId="tests" />
+    </history-entry>
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -352,13 +357,13 @@
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.32979852" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
       <window_info id="LuaJ" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.27793974" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="10" side_tool="false" content_ui="tabs" />
       <window_info id="Python Console" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="8" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.27793974" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.175" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="9" side_tool="false" content_ui="tabs" />
-      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
+      <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Data View" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Cvs" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="4" side_tool="false" content_ui="tabs" />
       <window_info id="Message" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
@@ -377,6 +382,124 @@
     <watches-manager />
   </component>
   <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/text_script_dumper.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1819">
+          <caret line="107" column="35" lean-forward="false" selection-start-line="107" selection-start-column="35" selection-end-line="107" selection-end-column="35" />
+          <folding>
+            <element signature="e#187#220#0" expanded="true" />
+            <element signature="e#5112#5866#0" expanded="false" />
+            <element signature="e#5908#6611#0" expanded="false" />
+            <element signature="e#6657#9245#0" expanded="false" />
+            <element signature="e#9338#9747#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tests/test-data/TextScriptChipDescriptions0_86eb8b8.s">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="43418">
+          <caret line="2554" column="6" lean-forward="false" selection-start-line="2554" selection-start-column="6" selection-end-line="2554" selection-end-column="6" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tests/test-data/TextScriptChipTrader86C580C.s">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="15419">
+          <caret line="907" column="5" lean-forward="false" selection-start-line="907" selection-start-column="0" selection-end-line="907" selection-end-column="5" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/text_script_scanner.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/TextScript.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="102">
+          <caret line="6" column="44" lean-forward="false" selection-start-line="6" selection-start-column="44" selection-end-line="6" selection-end-column="44" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/test.ign">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="238">
+          <caret line="14" column="16" lean-forward="false" selection-start-line="14" selection-start-column="16" selection-end-line="14" selection-end-column="16" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tests/test-data/TextScriptChipDescriptions0_86eb8b8.s">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="43418">
+          <caret line="2554" column="6" lean-forward="false" selection-start-line="2554" selection-start-column="6" selection-end-line="2554" selection-end-column="6" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tests/test-data/TextScriptChipTrader86C580C.s">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="15419">
+          <caret line="907" column="5" lean-forward="false" selection-start-line="907" selection-start-column="0" selection-end-line="907" selection-end-column="5" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/text_script_scanner.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/TextScript.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="102">
+          <caret line="6" column="44" lean-forward="false" selection-start-line="6" selection-start-column="44" selection-end-line="6" selection-end-column="44" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/text_script_dumper.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="18" lean-forward="false" selection-start-line="0" selection-start-column="18" selection-end-line="9" selection-end-column="16" />
+          <folding>
+            <element signature="e#187#220#0" expanded="true" />
+            <element signature="e#5112#5866#0" expanded="false" />
+            <element signature="e#5908#6611#0" expanded="false" />
+            <element signature="e#6657#9245#0" expanded="false" />
+            <element signature="e#9338#9747#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/tests/text_script_dumper_test.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1309">
+          <caret line="77" column="0" lean-forward="true" selection-start-line="77" selection-start-column="0" selection-end-line="77" selection-end-column="0" />
+          <folding>
+            <element signature="e#0#15#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/config.ini">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="34">
+          <caret line="2" column="30" lean-forward="false" selection-start-line="2" selection-start-column="30" selection-end-line="2" selection-end-column="30" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/test.ign">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="238">
@@ -423,8 +546,10 @@
           <caret line="756" column="0" lean-forward="true" selection-start-line="756" selection-start-column="0" selection-end-line="756" selection-end-column="0" />
           <folding>
             <element signature="e#187#220#0" expanded="true" />
-            <element signature="e#2966#3720#0" expanded="false" />
-            <element signature="e#4511#7099#0" expanded="false" />
+            <element signature="e#5112#5866#0" expanded="false" />
+            <element signature="e#5908#6611#0" expanded="false" />
+            <element signature="e#6657#9245#0" expanded="false" />
+            <element signature="e#9338#9747#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -469,7 +594,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="391">
           <caret line="23" column="35" lean-forward="false" selection-start-line="23" selection-start-column="35" selection-end-line="23" selection-end-column="35" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -479,8 +603,10 @@
           <caret line="733" column="16" lean-forward="true" selection-start-line="733" selection-start-column="16" selection-end-line="733" selection-end-column="16" />
           <folding>
             <element signature="e#187#220#0" expanded="true" />
-            <element signature="e#2966#3720#0" expanded="false" />
-            <element signature="e#4511#7099#0" expanded="false" />
+            <element signature="e#5112#5866#0" expanded="false" />
+            <element signature="e#5908#6611#0" expanded="false" />
+            <element signature="e#6657#9245#0" expanded="false" />
+            <element signature="e#9338#9747#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -555,7 +681,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="391">
           <caret line="23" column="35" lean-forward="true" selection-start-line="23" selection-start-column="35" selection-end-line="23" selection-end-column="35" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -565,8 +690,10 @@
           <caret line="58" column="19" lean-forward="false" selection-start-line="58" selection-start-column="19" selection-end-line="58" selection-end-column="19" />
           <folding>
             <element signature="e#187#220#0" expanded="true" />
-            <element signature="e#2966#3720#0" expanded="false" />
-            <element signature="e#4511#7099#0" expanded="false" />
+            <element signature="e#5112#5866#0" expanded="false" />
+            <element signature="e#5908#6611#0" expanded="false" />
+            <element signature="e#6657#9245#0" expanded="false" />
+            <element signature="e#9338#9747#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -640,13 +767,12 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="391">
           <caret line="23" column="35" lean-forward="false" selection-start-line="23" selection-start-column="35" selection-end-line="23" selection-end-column="35" />
-          <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/test.ign">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="238">
+        <state relative-caret-position="0">
           <caret line="14" column="16" lean-forward="false" selection-start-line="14" selection-start-column="16" selection-end-line="14" selection-end-column="16" />
           <folding />
         </state>
@@ -660,33 +786,43 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/text_script_dumper.py">
+    <entry file="file://$PROJECT_DIR$/config.ini">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-10202">
-          <caret line="0" column="18" lean-forward="false" selection-start-line="0" selection-start-column="18" selection-end-line="9" selection-end-column="16" />
-          <folding>
-            <element signature="e#187#220#0" expanded="true" />
-            <element signature="e#2966#3720#0" expanded="false" />
-            <element signature="e#4511#7099#0" expanded="false" />
-          </folding>
+        <state relative-caret-position="204">
+          <caret line="12" column="41" lean-forward="false" selection-start-line="12" selection-start-column="41" selection-end-line="12" selection-end-column="41" />
+          <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/tests/text_script_dumper_test.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="120">
-          <caret line="77" column="0" lean-forward="true" selection-start-line="77" selection-start-column="0" selection-end-line="77" selection-end-column="0" />
+        <state relative-caret-position="986">
+          <caret line="60" column="41" lean-forward="false" selection-start-line="60" selection-start-column="41" selection-end-line="60" selection-end-column="41" />
           <folding>
             <element signature="e#0#15#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/config.ini">
+    <entry file="file://$USER_HOME$/.PyCharmCE2017.2/system/python_stubs/243726818/builtins.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="34">
-          <caret line="2" column="30" lean-forward="false" selection-start-line="2" selection-start-column="30" selection-end-line="2" selection-end-column="30" />
+        <state relative-caret-position="375">
+          <caret line="3609" column="24" lean-forward="false" selection-start-line="3609" selection-start-column="24" selection-end-line="3609" selection-end-column="24" />
           <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/text_script_dumper.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="423">
+          <caret line="90" column="34" lean-forward="false" selection-start-line="90" selection-start-column="34" selection-end-line="90" selection-end-column="34" />
+          <folding>
+            <element signature="e#187#220#0" expanded="true" />
+            <element signature="e#5112#5866#0" expanded="false" />
+            <element signature="e#5908#6611#0" expanded="false" />
+            <element signature="e#6657#9245#0" expanded="false" />
+            <element signature="e#9338#9747#0" expanded="false" />
+          </folding>
         </state>
       </provider>
     </entry>

@@ -11,7 +11,7 @@ class RegressionTests(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def assertCompilation(self, textScript: TextScript, byte_stream, addr: int):
+    def assertCompilation(self, textScript: TextScriptArchive, byte_stream, addr: int):
         prev_addr = byte_stream.tell()
         byte_stream.seek(addr)
 
@@ -31,7 +31,7 @@ class RegressionTests(unittest.TestCase):
 
     def assertTestFile(self, test_name):
         with open(self.test_data_dir + test_name + '.bin', 'rb') as bin_file:
-            textScript = TextScript.read_script(0, bin_file, self.ini_dir)
+            textScript = TextScriptArchive.read_script(0, bin_file, self.ini_dir)
             script, end_addr = textScript.build()
 
             def print_script(script, end_addr):
@@ -96,7 +96,7 @@ class RegressionTests(unittest.TestCase):
     def testAgbasmOutput(self):
         # update agbasm_output.s to test validity of the macro system in some instances
         with open(self.test_data_dir + 'TextScriptChipTrader86C580C' + '.bin', 'rb') as bin_file:
-            text_script = TextScript.read_script(ea=0, bin_file=bin_file, ini_path=self.ini_dir)
+            text_script = TextScriptArchive.read_script(ea=0, bin_file=bin_file, ini_path=self.ini_dir)
             with open(self.rom_path, 'rb') as gba_file:
                 self.assertCompilation(text_script, gba_file, 0x6C580C)
 
