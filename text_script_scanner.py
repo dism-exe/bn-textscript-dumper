@@ -35,7 +35,7 @@ def read_archives(archives_path):
 def try_parse_script(bin_file, addr):
     try:
 
-        scr = dumper.parse_text_script('./', bin_file, addr)
+        scr = dumper.read('./', bin_file, addr)
     except Exception:
         return None
 
@@ -47,7 +47,7 @@ def size_scan_archives(bin_file, archives_path):
         size = decomp.getLZ77CompressedSize(archive_addr, bin_file)
         if size < 0:
             # try to parse it as text script and get the size
-            scr = dumper.parse_text_script('./', )
+            scr = dumper.read('./', )
 
 if __name__ == '__main__':
     main()

@@ -83,33 +83,46 @@ error.list = []
 
 class TextScript:
     def __init__(self, units: list, addr: int, size: int):
+        """
+        :param units: list of textscript elements: GameString and TextScriptCommand
+        :param addr: the base address of the textscript
+        :param size: the size of the text script
+        """
         self.units = units
         self.addr = addr
         self.size = size
 
     @staticmethod
-    def read(bin_file, size: int, sects, sects_s, addr: int=None):
+    def read(bin_file, size: int, sects, sects_s):
+        """
+        reads a textscript segment that terminates with E6 or has a known size
+        :param bin_file: binary file stream to read the file from
+        :param size: if None, this is computed as the text script is parsed, and size is determined
+                     at the first occurance of an E6 (or termination command)
+        :param sects: list of command dictionaries using the regular interpreter
+        :param sects_s: list of command dictionaries using the secondary interpreter
+        :return: TextScript object representation
+        """
         units = []  # text script discrete string/cmd units
         end_script = False  # true when an E6 is detected
-        if addr:
-            # TODO: why is there a variable called address outside this scope?
-            bin_file.seek(addr)
-        else:
-            addr = bin_file.tell()
+        addr = bin_file.tell()
 
         def before_end_script():
-            return bin_file.tell() < addr + size
+            if not size:
+                return not end_script
+            else:
+                return not end_script and bin_file.tell() < addr + size
 
         def before_string_term():
             return byte and (ord(byte) < 0xE5 or ord(byte) == 0xE6 or ord(byte) == 0xE9)
 
-        while before_end_script() and not end_script:
+        while before_end_script():
             # advance bytecode
             byte = bin_file.read(1)
             # read string
             string = b''
 
-            while before_end_script and before_string_term():
+            while before_end_script() and before_string_term():
                 # not a command, process string
                 string = string + byte
                 if ord(byte) == 0xE9:
@@ -140,6 +153,18 @@ class TextScript:
             # different interpreters are prioritized based on registered conflict commands
             units.append(TextScriptCommand.read_cmd(bin_file, cmd, sects, sects_s,
                                                     TextScriptCommand.guess_interpreter(bin_file, cmd)))
+
+        # compute size if it was not provided
+        if not size:
+            size = bin_file.tell() - addr
+
+        return TextScript(units, addr, size)
+
+    def display(self):
+        """
+        Creates a string representation of the TextScript
+        :return:
+        """
 
 
 class TextScriptArchive:
@@ -273,29 +298,37 @@ class TextScriptArchive:
         return rel_pointers
 
     @staticmethod
-    def parse_text_script(address: int, bin_file, sects, sects_s, size=-1) -> 'TextScriptArchive':
-
+    def read(bin_file, sects, sects_s, size: int=None) -> 'TextScriptArchive':
+        """
+        :param bin_file: binary file stream to read the file from
+        :param sects: list of command dictionaries using the regular interpreter
+        :param sects_s: list of command dictionaries using the secondary interpreter
+        :param size: if not None, the script archive will end at the specified size
+        :return: TextScriptArchive object representation
+        """
         units = []  # text script discrete string/cmd units
-        bin_file.seek(address)
+        address = bin_file.tell()
         rel_pointers = TextScriptArchive.read_relative_pointers(bin_file, address)
         last_script_pointer = max(rel_pointers)
         end_script = False
 
-        reached_kwnown_size_end = lambda base, cur: size < 0 #and cur < base + size
-
-        # checks that we reached the last text_script in the archive
-        before_last_script = lambda: bin_file.tell() < address + last_script_pointer or not end_script
+        def before_last_script():
+            # checks that we reached the last text_script in the archive
+            return bin_file.tell() < address + last_script_pointer or not end_script
 
         def before_known_script_size():
-            if size < 0: return True # size not specified, can't know
+            if not size:
+                return True  # size not specified, can't know
             return bin_file.tell() < address + size
+
+        def before_string_term():
+            return byte and (ord(byte) < 0xE5 or ord(byte) == 0xE6 or ord(byte) == 0xE9)
 
         while before_last_script() and before_known_script_size():
             # advance bytecode
             byte = bin_file.read(1)
             # read string
             string = b''
-            before_string_term = lambda: byte and (ord(byte) < 0xE5 or ord(byte) == 0xE6 or ord(byte) == 0xE9)
             while before_last_script() and before_known_script_size() and before_string_term():
                 # not a command, process string
                 string = string + byte
@@ -386,9 +419,10 @@ class TextScriptArchive:
 
 
     @staticmethod
-    def read_script(ea: int, bin_file, ini_path, size=-1) -> 'TextScriptArchive':
+    def read_script(ea: int, bin_file, ini_path, size: int=None) -> 'TextScriptArchive':
         # ensure ea is file relative
         ea &= ~0x8000000
+        bin_file.seek(ea)
 
         if not ini_path.endswith('/'):
             ini_path += '/'
@@ -396,8 +430,7 @@ class TextScriptArchive:
         error.list = []
         sects = read_custom_ini(ini_path + 'mmbn6.ini')
         sects_s = read_custom_ini(ini_path + 'mmbn6s.ini')
-        scr = TextScriptArchive.parse_text_script(ea, bin_file, sects, sects_s, size)
-        return scr
+        return TextScriptArchive.read(bin_file, sects, sects_s, size)
 
 
 class TextScriptCommand:
@@ -776,8 +809,6 @@ if __name__ == '__main__':
         args.ini_dir = ModuleState.INI_DIR
     if args.ini_dir and args.ini_dir[-1] != '/':
         args.ini_dir = args.ini_dir + '/'
-    if not args.size:
-        args.size = -1
 
     def parse_script_size(val):
         words = val.split(' ')
