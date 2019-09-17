@@ -4,27 +4,40 @@ from text_script_dumper import *
 
 class RegressionTests(unittest.TestCase):
     def setUp(self):
-        self.test_data_dir = 'test-data/'
+        self.test_data_dir = 'data/'
         self.ini_dir = ModuleState.INI_DIR
         self.rom_path = ModuleState.ROM_PATH
         pass
     def tearDown(self):
         pass
 
-    def assertCompilation(self, textScript: TextScriptArchive, byte_stream, addr: int):
+    def assertCompilation(self, textArchive: TextScriptArchive, byte_stream, addr: int):
+        """
+        Exhaustive test, tests that the text archive compiles to the correct bytes
+        Shows the last 10 bytes and where a mismatch occurred
+        :param textArchive:
+        :param byte_stream:
+        :param addr:
+        :return:
+        """
         prev_addr = byte_stream.tell()
         byte_stream.seek(addr)
+        actual_data = b''
+        data = textArchive.serialize()
+        for i in range(0, textArchive.size):
+            actual_data += byte_stream.read(1)
+            if i in textArchive.rel_pointers:
+                print('[rel. pointer] text_script %d (0x%x)' % (sorted(list(set(textArchive.rel_pointers))).index(i), i))
+            if i < 2*len(textArchive.rel_pointers):
+                continue
 
-        data = textScript.compile()
-        for i in range(0, textScript.size):
-            expected_byte = byte_stream.read(1)
-            # if i in textScript.rel_pointers: print('text_script %d (0x%x)' % (sorted(list(set(textScript.rel_pointers))).index(i), i))
-            # print('0x%x: %s, %s' % (i, expected_byte, data[i:i+1]))
-            if i < 2*len(textScript.rel_pointers): continue
-            # if i < 0x4af+1: continue
-            # if i < 0x4c0: continue
-            self.assertEqual(expected_byte, data[i:i+1],
-                             'compilation data mismatch at byte 0x%0x' % i)
+            def tail_slice(byte_str, cur: int, window: int) -> str:
+                # returns a slice with the last :window: elements up to :cur: inclusive or since the begenning
+                return byte_str[max(cur-window, 0):cur+1]
+
+            self.assertEqual(actual_data[i], data[i],
+                             'compilation data mismatch at byte 0x%0x\nexpected slice:%s\nactual slice:  %s'
+                             % (i, tail_slice(actual_data, i, 10), tail_slice(data, i, 10)))
 
         byte_stream.seek(prev_addr)
 
@@ -32,16 +45,14 @@ class RegressionTests(unittest.TestCase):
     def assertTestFile(self, test_name):
         with open(self.test_data_dir + test_name + '.bin', 'rb') as bin_file:
             textScript = TextScriptArchive.read_script(0, bin_file, self.ini_dir)
-            script, end_addr = textScript.build()
+            script = textScript.build_str()
 
-            def print_script(script, end_addr):
-                for i in script: print(i)
-                print(hex(end_addr))
-            # print_script(script, end_addr)
+            print('[script]')
+            print(script, hex(textScript.size))
 
             with open(self.test_data_dir + test_name + '.s', 'r', encoding='utf-8') as f:
                 lines = f.readlines()
-                script = '\n'.join(script).split('\n')
+                script = script.split('\n')
                 for line in script:
                     if not line.strip():
                         script.remove(line)
@@ -153,7 +164,7 @@ class CommandParsingTests(unittest.TestCase):
 
     def assertCommandparsed(self, byteStream, cmd, params, cmdName, prioritize_s):
         startAddr = byteStream.tell()
-        out = TextScriptCommand.read_cmd(byteStream,byteStream.read(1), self.sects, self.sects_s, prioritize_s)
+        out = TextScriptCommand.read(byteStream, byteStream.read(1), self.sects, self.sects_s, prioritize_s)
         if not out:
             self.fail('%s: could not read commad: %s %s' % (cmdName, cmd, params))
         self.assertEqual(out.cmd, cmd, '%s: invalid command read' % cmdName)

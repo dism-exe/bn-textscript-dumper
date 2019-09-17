@@ -1,7 +1,6 @@
 # This will parse a textScript at the address specified, from the file specified.
 # if no file is specified, it will use the default ('../../bn6f.ign')
 # ini_file defaults to 'mmbn6.ini'
-from dataclasses import dataclass
 from os import path
 import sys
 import configparser
@@ -56,7 +55,6 @@ def log(*args, **kwargs):
     if ModuleState.LOG:
         print(*args, **kwargs)
 
-
 class TextScriptException(Exception):
     pass
 
@@ -108,7 +106,7 @@ class TextScript:
         addr = bin_file.tell()
 
         def before_end_script():
-            if not size:
+            if size is None:
                 return not end_script
             else:
                 return not end_script and bin_file.tell() < addr + size
@@ -145,85 +143,115 @@ class TextScript:
             cmd = byte
 
             if ord(cmd) == 0xE6:
+                continue  # accounted for in string
+
+            # read command
+            units.append(TextScriptCommand.read(bin_file, cmd, sects, sects_s,
+                                                TextScriptCommand.guess_interpreter(bin_file, cmd)))
+
+            if ord(cmd) == 0xE6:
                 end_script = True
                 continue  # accounted for in string
 
-            # handle control commands
-
-            # different interpreters are prioritized based on registered conflict commands
-            units.append(TextScriptCommand.read_cmd(bin_file, cmd, sects, sects_s,
-                                                    TextScriptCommand.guess_interpreter(bin_file, cmd)))
-
         # compute size if it was not provided
-        if not size:
+        if size is None:
             size = bin_file.tell() - addr
 
         return TextScript(units, addr, size)
 
-    def display(self):
-        """
-        Creates a string representation of the TextScript
-        :return:
-        """
-
-
-class TextScriptArchive:
-    def __init__(self, rel_pointers: list, units: list, addr: int, size: int, sects: list, sects_s: list):
-        self.rel_pointers = rel_pointers # [int]
-        self.units = units # int (link ids), tuple (command), str (bytes)
-        self.addr = addr
-        self.size = size
-        self.sects = sects # list[dict]
-        self.sects_s = sects_s # [dict]
-
-    def get_unit_at(self, idx):
-        curr_idx = 2 * len(self.rel_pointers)
-        prev_idx = curr_idx
-        prev_unit = self.units[0]
+    def build_str(self) -> str:
+        out = '\ttext_script %d, scr_%d' % (self.addr, self,addr) # TODO: update by giving id to this object
+        # build units
         for unit in self.units:
-            if type(unit) != int:
-                if prev_idx < idx < curr_idx:
-                    return prev_unit, prev_idx
-                if idx == curr_idx:
-                    return unit, curr_idx
-                prev_idx = curr_idx
-                prev_unit = unit
-                if type(unit) is GameString:
-                    curr_idx += len(unit.data)
-                elif type(unit) is TextScriptCommand:
-                    curr_idx += len(unit.cmd) + len(unit.params)
+            if type(unit) is GameString:
+                if len(unit.data) == 1 and unit.data[0] == 0xE6:
+                    s = TextScriptCommand.get_cmd_macro(unit.data, b'', self.sects, self.sects_s, False)
                 else:
-                    raise InvalidTextScriptCommandException('invalid unit detected: %s' % unit)
-        return None
-
-    def compile(self) -> bytes:
-        out = b''
-        # since they are hwords, a \x00 has to be appended if the pointer is < 0xFF
-        for b in self.rel_pointers:
-            if b > 0xFF:
-                out += bytes([b & 0xFF, b >> 8])
+                    s = '.string "%s"' % unit.to_string()
+                if s == '':
+                    raise TextScriptException('invalid string output for %s' % unit)
+                out += '\t' + s
+            elif type(unit) is TextScriptCommand:
+                name = unit.macro
+                s = '%s ' % name
+                for i in range(len(unit.params)):
+                    # jump commands go to a linked script
+                    if 'jump' in name.lower() and i == 0:
+                        s += '%d, ' % unit.params[i]
+                    else:
+                        s += '0x%X, ' % unit.params[i]
+                if unit.params: s = s[:-2]
+                s = s.rstrip()
+                if s == '':
+                    raise TextScriptException('invalid string output for %s' % unit)
+                out += '\t' + s
             else:
-                out += bytes([b, 0x00])
+                raise TextScriptException('invalid unit type')
+
+        return out
+
+    def serialize(self) -> bytes:
+        out = b''
         # compile data
         for unit in self.units:
             if type(unit) == GameString:
                 # game string
                 out += unit.data
             elif type(unit) == TextScriptCommand:
-                out += unit.compile()
-            elif type(unit) == int:
-                # link id, not needed
-                pass
+                out += unit.serialize()
             else:
                 raise TextScriptException('invalid unit type')
         return out
 
-    def build(self) -> (list, int):
+    def get_unit_at(self, base_idx, idx):
+        cur_idx = base_idx
+        prev_idx = cur_idx
+        prev_unit = self.units[0]
+        for unit in self.units:
+            if type(unit) != int:
+                if prev_idx < idx < cur_idx:
+                    return prev_unit, prev_idx
+                if idx == cur_idx:
+                    return unit, cur_idx
+                prev_idx = cur_idx
+                prev_unit = unit
+                if type(unit) is GameString:
+                    cur_idx += len(unit.data)
+                elif type(unit) is TextScriptCommand:
+                    cur_idx += len(unit.cmd) + len(unit.params)
+                else:
+                    raise InvalidTextScriptCommandException('invalid unit detected: %s' % unit)
+        return None
+
+
+class TextScriptArchive:
+    def __init__(self, rel_pointers: list, text_scripts: list, addr: int, size: int, sects: list, sects_s: list):
+        self.rel_pointers = rel_pointers
+        self.text_scripts = text_scripts
+        self.addr = addr
+        self.size = size
+        self.sects = sects
+        self.sects_s = sects_s
+
+
+    def serialize(self) -> bytes:
+        out = b''
+        # since rel. pointers are hwords, a \x00 has to be appended if the pointer is < 0xFF
+        for b in self.rel_pointers:
+            if b > 0xFF:
+                out += bytes([b & 0xFF, b >> 8])
+            else:
+                out += bytes([b, 0x00])
+        # serialize scripts
+        for text_script in self.text_scripts:
+            out += text_script.serialize()
+        return out
+
+    def build_str(self) -> str:
         """
-        creates the script textual output
-        :return: the text output in a list of lines, and the end address
+        :return: the text script archive as a string
         """
-        script = ['\ttext_script_start unk_%X // TODO: change this if label is named different' % self.addr]
+        out = '\ttext_script_start unk_%X // TODO: change this if label is named different\n' % self.addr
 
         # assign unique ids to each pointer for reference
         rel_pointer_ids = {}
@@ -247,41 +275,27 @@ class TextScriptArchive:
             rel_pointers_macro += '%d, ' % rel_pointer_ids[p]
             item_idx += 1
         rel_pointers_macro = rel_pointers_macro[:-2] # remove tail ', '
-        script.append(rel_pointers_macro)
+        out += rel_pointers_macro + '\n'
 
-        # build units
-        for unit in self.units:
-            if type(unit) is GameString:
-                if len(unit.data) == 1 and unit.data[0] == 0xE6:
-                    s = TextScriptCommand.get_cmd_macro(unit.data, b'', self.sects, self.sects_s, False)
-                else:
-                    s = '.string "%s"' % unit.string()
-                if s == '':
-                    raise TextScriptException('invalid string output for %s' % unit)
-                script.append('\t' + s)
-            elif type(unit) is TextScriptCommand:
-                name = unit.macro
-                s = '%s ' % name
-                for i in range(len(unit.params)):
-                    # jump commands go to a linked script
-                    if 'jump' in name.lower() and i == 0:
-                        s += '%d, ' % unit.params[i]
-                    else:
-                        s += '0x%X, ' % unit.params[i]
-                if unit.params: s = s[:-2]
-                s = s.rstrip()
-                if s == '':
-                    raise TextScriptException('invalid string output for %s' % unit)
-                script.append('\t' + s)
-            elif type(unit) is int:
-                script.append('\n\ttext_script %d, scr_%d' % (unit, unit))
-            else:
-                raise TextScriptException('invalid unit type')
+        # build text scripts
+        for text_script in self.text_scripts:
+            out += str(text_script) + '\n'
 
         # text scripts are always aligned by 4
-        script.append('\n\t.balign 4, 0')
+        out += '\n\t.balign 4, 0'
 
-        return script, self.addr + self.size
+        return out
+
+    def get_unit_at(self, idx):
+        cur_idx = 2 * len(self.rel_pointers)
+        prev_idx = cur_idx
+        for script in self.text_scripts:
+            out = script.get_unit_at(cur_idx, idx)
+            if out is not None:
+                return out
+            # advance idx
+            cur_idx += script.size
+        return None
 
 
     @staticmethod
@@ -306,116 +320,25 @@ class TextScriptArchive:
         :param size: if not None, the script archive will end at the specified size
         :return: TextScriptArchive object representation
         """
-        units = []  # text script discrete string/cmd units
         address = bin_file.tell()
         rel_pointers = TextScriptArchive.read_relative_pointers(bin_file, address)
         last_script_pointer = max(rel_pointers)
-        end_script = False
 
-        def before_last_script():
-            # checks that we reached the last text_script in the archive
-            return bin_file.tell() < address + last_script_pointer or not end_script
-
-        def before_known_script_size():
-            if not size:
-                return True  # size not specified, can't know
-            return bin_file.tell() < address + size
-
-        def before_string_term():
-            return byte and (ord(byte) < 0xE5 or ord(byte) == 0xE6 or ord(byte) == 0xE9)
-
-        while before_last_script() and before_known_script_size():
-            # advance bytecode
-            byte = bin_file.read(1)
-            # read string
-            string = b''
-            while before_last_script() and before_known_script_size() and before_string_term():
-                # not a command, process string
-                string = string + byte
-                # separate strings by line or rel. pointers
-                if ord(byte) == 0xE9 or bin_file.tell() in rel_pointers:
-                    units.append(GameString(string))
-                    string = b''
-                if ord(byte) == 0xE6:
-                    end_script = bin_file.tell() > address + last_script_pointer
-                    break  # this string terminates
-                byte = bin_file.read(1)
-
-            if string:
-                units.append(GameString(string))
-            if byte == b'':
-                error(TextScriptException, 'error: reached end of file before script end', critical=True)
-                break
-
-            # current bytecode command
-            cmd = byte
-            if ord(cmd) == 0xE6:
-                continue  # accounted for in string
-
-            # handle control commands
-            # only end script at the end of the very last segment
-            if not end_script:
-                end_script = bin_file.tell() > address + last_script_pointer and ord(cmd) == 0xE6
-
-            # different interpreters are prioritized based on registered conflict commands
-            units.append(TextScriptCommand.read_cmd(bin_file, cmd, sects, sects_s,
-                                                    TextScriptCommand.guess_interpreter(bin_file, cmd)))
-        end_addr = bin_file.tell()
-
-        # link relative pointers into units
-        cur_idx = 2 * len(rel_pointers)
-        prev_idx = cur_idx
-        unique_rel_pointers = sorted(list(set(rel_pointers)))
-        used_rel_pointers = []
-        linked_units = []
-        prev_unit = None
-        for unit in units:
-            if type(unit) != int:
-                for i in range(len(unique_rel_pointers)):
-                    # v false logic, inverted
-                    if prev_idx < unique_rel_pointers[i] < cur_idx:
-                        if type(prev_unit) == TextScriptCommand:
-                            error(TextScriptException,
-                                  'found rel. pointer %d (%xh<%xh<%xh) in element %s %s'
-                                  % (i, prev_idx, unique_rel_pointers[i], cur_idx,
-                                     prev_unit.macro,
-                                     str(prev_unit.compile())),
-                                  critical=False)
-                        elif type(prev_unit) == GameString:
-                            error(TextScriptException,
-                                  'found rel. pointer %d (%xh<%xh<%xh) in element "%s"'
-                                  % (i, prev_idx, unique_rel_pointers[i], cur_idx,
-                                     prev_unit.string),
-                                  critical=False)
-                        else:
-                            error(TextScriptException, 'invalid unit state while linking')
-                    if cur_idx == unique_rel_pointers[i]:
-                        linked_units.append(i)
-                        used_rel_pointers.append(i)
-                        break
-            linked_units.append(unit)
-
-            # compute new cur_idx and store prev_idx
-            prev_idx = cur_idx
-            if type(unit) is GameString:
-                cur_idx += len(unit.data)
-            elif type(unit) is TextScriptCommand:
-                cur_idx += unit.size
-            elif type(unit) is int:
-                pass
+        scripts = []
+        for i, ptr in enumerate(rel_pointers):
+            # determine size of script, if known
+            if i < len(rel_pointers)-1:
+                size = rel_pointers[i+1] - ptr
             else:
-                raise InvalidTextScriptCommandException('invalid unit detected: %s' % unit)
+                size = None
 
-            prev_unit = unit
-        units = linked_units
-
-        if len(used_rel_pointers) != len(unique_rel_pointers):
-            error(TextScriptException, 'did not link all rel. pointers (%d missing).'
-                  % (len(rel_pointers) - len(used_rel_pointers)),
-                  critical=False)
+            # read text script
+            if size == 0:
+                scripts.append(TextScript([], ptr, 0))
+            scripts.append(TextScript.read(bin_file, size, sects, sects_s))
 
         # create Script object
-        return TextScriptArchive(rel_pointers, units, address, end_addr - address, sects, sects_s)
+        return TextScriptArchive(rel_pointers, scripts, address, bin_file.tell() - address, sects, sects_s)
 
 
     @staticmethod
@@ -448,7 +371,7 @@ class TextScriptCommand:
         self.macro = macro
         self.size = self.get_cmd_len(cmd, params, with_interpreter_s)
 
-    def compile(self):
+    def serialize(self):
         if self.cmd[0:2] == b'\xfa\x00':
             # have to put the params back into the command
             cmd_bytes = list(self.cmd)
@@ -466,7 +389,7 @@ class TextScriptCommand:
         return compiled_cmd
 
     @staticmethod
-    def read_cmd(bin_file, cmd: bytes, sects, sects_s, with_interpreter_s) -> 'TextScriptCommand':
+    def read(bin_file, cmd: bytes, sects, sects_s, with_interpreter_s) -> 'TextScriptCommand':
         """
         use guess_interpreter to determine likely value of with_interpreter_s.
         with_interpreter_s is the distinction between dilog and visual commands.
@@ -693,7 +616,7 @@ class GameString:
         self.data = byte_data
         self.tbl_path = tbl_path
 
-    def string(self):
+    def to_string(self):
         return GameString.bn6f_str(self.data, GameString.get_tbl(self.tbl_path))
 
     @staticmethod
@@ -827,8 +750,8 @@ if __name__ == '__main__':
 
 
     with open(args.file, 'rb') as f:
-        script, end_addr = TextScriptArchive.read_script(args.address, f, args.ini_dir, args.size).build()
-    for i in script:
+        out, end_addr = TextScriptArchive.read_script(args.address, f, args.ini_dir, args.size).display()
+    for i in out:
         print(i)
     print(hex(end_addr))
     for e in error.list:
