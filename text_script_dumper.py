@@ -91,7 +91,7 @@ class TextScript:
         self.size = size
 
     @staticmethod
-    def read(bin_file, size: int, sects, sects_s):
+    def read(bin_file, size: int, id: int, sects, sects_s):
         """
         reads a textscript segment that terminates with E6 or has a known size
         :param bin_file: binary file stream to read the file from
@@ -159,8 +159,12 @@ class TextScript:
 
         return TextScript(units, addr, size)
 
-    def build_str(self) -> str:
-        out = '\ttext_script %d, scr_%d' % (self.addr, self,addr) # TODO: update by giving id to this object
+    def build(self) -> str:
+        """
+        builds the TextScript into a text format
+        """
+        out = '\ttext_script {0}, scr_{0}\n'.format(self.addr) # FIXME: update by giving id to this object
+
         # build units
         for unit in self.units:
             if type(unit) is GameString:
@@ -247,7 +251,7 @@ class TextScriptArchive:
             out += text_script.serialize()
         return out
 
-    def build_str(self) -> str:
+    def build(self) -> str:
         """
         :return: the text script archive as a string
         """
@@ -279,7 +283,7 @@ class TextScriptArchive:
 
         # build text scripts
         for text_script in self.text_scripts:
-            out += str(text_script) + '\n'
+            out += text_script.build() + '\n'
 
         # text scripts are always aligned by 4
         out += '\n\t.balign 4, 0'

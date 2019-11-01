@@ -2,37 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="1bf178ec-3a3a-4e48-852d-2b0a3bfba14d" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/bn_textscript_dumper.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea_old/bn-textscript-dumper.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/common.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/bn-textscript-dumper.iml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/TextScript.py" beforeDir="false" afterPath="$PROJECT_DIR$/TextScript.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config.ini" beforeDir="false" afterPath="$PROJECT_DIR$/config.ini" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mmbn6.ini" beforeDir="false" afterPath="$PROJECT_DIR$/mmbn6.ini" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/mmbn6s.ini" beforeDir="false" afterPath="$PROJECT_DIR$/mmbn6s.ini" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/output.ign" beforeDir="false" afterPath="$PROJECT_DIR$/output.ign" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test.ign" beforeDir="false" afterPath="$PROJECT_DIR$/test.ign" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test-data/TextScriptBattleTutFullSynchro.bin" beforeDir="false" afterPath="$PROJECT_DIR$/tests/data/TextScriptBattleTutFullSynchro.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test-data/TextScriptBattleTutFullSynchro.s" beforeDir="false" afterPath="$PROJECT_DIR$/tests/data/TextScriptBattleTutFullSynchro.s" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test-data/TextScriptChipDescriptions0_86eb8b8.bin" beforeDir="false" afterPath="$PROJECT_DIR$/tests/data/TextScriptChipDescriptions0_86eb8b8.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test-data/TextScriptChipDescriptions0_86eb8b8.s" beforeDir="false" afterPath="$PROJECT_DIR$/tests/data/TextScriptChipDescriptions0_86eb8b8.s" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test-data/TextScriptChipTrader86C580C.bin" beforeDir="false" afterPath="$PROJECT_DIR$/tests/data/TextScriptChipTrader86C580C.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test-data/TextScriptChipTrader86C580C.s" beforeDir="false" afterPath="$PROJECT_DIR$/tests/data/TextScriptChipTrader86C580C.s" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test-data/TextScriptDialog87E30A0.bin" beforeDir="false" afterPath="$PROJECT_DIR$/tests/data/TextScriptDialog87E30A0.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test-data/TextScriptDialog87E30A0.s" beforeDir="false" afterPath="$PROJECT_DIR$/tests/data/TextScriptDialog87E30A0.s" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test-data/TextScriptFolderNames86cf4ac.bin" beforeDir="false" afterPath="$PROJECT_DIR$/tests/data/TextScriptFolderNames86cf4ac.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test-data/TextScriptFolderNames86cf4ac.s" beforeDir="false" afterPath="$PROJECT_DIR$/tests/data/TextScriptFolderNames86cf4ac.s" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test-data/TextScriptWhoAmI.bin" beforeDir="false" afterPath="$PROJECT_DIR$/tests/data/TextScriptWhoAmI.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test-data/TextScriptWhoAmI.s" beforeDir="false" afterPath="$PROJECT_DIR$/tests/data/TextScriptWhoAmI.s" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test-data/decompTextScriptCredits86C4B58.bin" beforeDir="false" afterPath="$PROJECT_DIR$/tests/data/decompTextScriptCredits86C4B58.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tests/text_script_dumper_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/text_script_dumper_test.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/text_script_dumper.py" beforeDir="false" afterPath="$PROJECT_DIR$/text_script_dumper.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/text_script_scanner.py" beforeDir="false" afterPath="$PROJECT_DIR$/text_script_scanner.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />

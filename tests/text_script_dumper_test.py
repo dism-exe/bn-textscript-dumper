@@ -35,6 +35,8 @@ class RegressionTests(unittest.TestCase):
                 # returns a slice with the last :window: elements up to :cur: inclusive or since the begenning
                 return byte_str[max(cur-window, 0):cur+1]
 
+            print(textArchive.build())
+
             self.assertEqual(actual_data[i], data[i],
                              'compilation data mismatch at byte 0x%0x\nexpected slice:%s\nactual slice:  %s'
                              % (i, tail_slice(actual_data, i, 10), tail_slice(data, i, 10)))
@@ -45,7 +47,7 @@ class RegressionTests(unittest.TestCase):
     def assertTestFile(self, test_name):
         with open(self.test_data_dir + test_name + '.bin', 'rb') as bin_file:
             textScript = TextScriptArchive.read_script(0, bin_file, self.ini_dir)
-            script = textScript.build_str()
+            script = textScript.build()
 
             print('[script]')
             print(script, hex(textScript.size))
