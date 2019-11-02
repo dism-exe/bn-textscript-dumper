@@ -93,7 +93,7 @@ class TextScript:
         self.size = size
 
     @staticmethod
-    def read(bin_file, size: int, id: int, sects, sects_s):
+    def read(bin_file, size: int, archive_idx: int, sects, sects_s):
         """
         reads a textscript segment that terminates with E6 or has a known size
         :param bin_file: binary file stream to read the file from
@@ -119,18 +119,18 @@ class TextScript:
             else:
                 return byte != b'\xE6' and bin_file.tell() < addr + size
 
-        def in_game_string_range(byte) -> bool:
+        def is_valid_game_string_char(byte) -> bool:
             return byte is not b'' and (ord(byte) < 0xE5 or ord(byte) == 0xE6 or ord(byte) == 0xE9)
 
         # process TextScript units (commands or strings)
         byte = bin_file.read(1)
         units = []  # text script discrete string/cmd units
-        while in_script(bin_file, byte, size):
+        while True:
             def read_string_lines(bin_file, byte, size):
                 out = []
                 string = b''
                 # we need to force shut this down, due to the rare case of scripts ending mid-string...
-                while in_script(bin_file, byte, size) and in_game_string_range(byte):
+                while in_script(bin_file, byte, size) and is_valid_game_string_char(byte):
                     # not a command, process string
                     string = string + byte
                     if ord(byte) == 0xE9:
@@ -148,7 +148,12 @@ class TextScript:
 
                 return out, byte
 
-            if in_game_string_range(byte):
+            # TODO check: is this a valid check?
+            if byte == b'':
+                error(TextScriptException, 'error: reached end of file before script end', critical=True)
+                break
+
+            if is_valid_game_string_char(byte):
                 # read strings, which may be multiple line-separated units
                 strings, byte = read_string_lines(bin_file, byte, size)
                 if strings is not []:
@@ -156,31 +161,25 @@ class TextScript:
                     # make sure we didn't encounter an end_script command, otherwise our unit processing is over
                     if byte == b'\xE6':
                         break
+                    # if a command comes right after the text in the same script, it needs to be parsed as well
+                    # read_string_lines already advanced to the command byte, so it has to be interpreted too, next iteration.
+                    elif byte > b'\xE6':
+                        continue
             else:
                 # read current bytecode command
                 units.append(TextScriptCommand.read(bin_file, byte, sects, sects_s,
                                                     TextScriptCommand.guess_interpreter(bin_file, byte)))
 
-            # TODO check: is this a valid check?
-            if byte == b'':
-                error(TextScriptException, 'error: reached end of file before script end', critical=True)
+            # do while the script has not ended
+            if not in_script(bin_file, byte, size):
                 break
-
-            # advance byte code
             byte = bin_file.read(1)
-
-        # in case the last bytecode command is an end_script (empty script or outside string)
-        last_unit_is_string = lambda: len(units) > 0 and type(units[-1]) == GameString
-        if byte == b'\xE6' and not last_unit_is_string():
-            # read current bytecode command
-            units.append(TextScriptCommand.read(bin_file, byte, sects, sects_s,
-                                                TextScriptCommand.guess_interpreter(bin_file, byte)))
 
         # compute size if it was not provided
         if size is None:
             size = bin_file.tell() - addr
 
-        return TextScript(units, id, addr, size)
+        return TextScript(units, archive_idx, addr, size)
 
     def build(self) -> str:
         """
@@ -367,6 +366,7 @@ class TextScriptArchive:
                 else:
                     scripts.append(TextScript.read(bin_file, size, i, sects, sects_s))
             else:
+                pass
                 # invalid state
                 # TODO refactor: to TextScriptError
                 raise TextScriptException('invalid state: reading a script in a different location from its pointer {0} != {1}'
@@ -650,6 +650,7 @@ class GameString:
     def __init__(self, byte_data, tbl_path=ModuleState.TBL_PATH):
         self.data = byte_data
         self.tbl_path = tbl_path
+        self.text = self.to_string()
 
     def to_string(self):
         return GameString.bn6f_str(self.data, GameString.get_tbl(self.tbl_path))

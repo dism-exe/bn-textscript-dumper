@@ -1,6 +1,6 @@
 	text_script_start unk_0 // TODO: change this if label is named different
 
-	text_script_rel_pointers 0, 1, 2, 3, 4, 5, 6, 7, 8, 8, 8
+	text_script_rel_pointers 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
 
 	text_script 0, scr_0
 	.string "LanFldr$"
@@ -27,6 +27,10 @@
 	.string "RandFldr$"
 
 	text_script 8, scr_8
+
+	text_script 9, scr_9
+
+	text_script 10, scr_10
 	.string "Pack$"
 
 	.balign 4, 0

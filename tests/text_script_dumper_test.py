@@ -65,6 +65,8 @@ class RegressionTests(unittest.TestCase):
                     if script[i].strip().startswith('text_script '):
                         cur_script_idx += 1
                     self.assertEqual(script[i].strip(), lines[i].strip(), 'mismatch in script %d' % cur_script_idx)
+
+                end_addr = textScript.addr + textScript.size
                 self.assertEqual(int(lines[-1], 16), end_addr, 'end address mismatch')
                 self.assertEqual(len(script), len(lines) - 1, 'content length mismatch')
             bin_file.seek(0)
