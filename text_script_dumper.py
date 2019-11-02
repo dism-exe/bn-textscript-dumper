@@ -80,13 +80,15 @@ error.list = []
 
 
 class TextScript:
-    def __init__(self, units: list, addr: int, size: int):
+    def __init__(self, units: list, archive_idx: int, addr: int, size: int):
         """
         :param units: list of textscript elements: GameString and TextScriptCommand
+        :param archive_idx: represents the index of the TextScript in its container TextScriptArchive
         :param addr: the base address of the textscript
         :param size: the size of the text script
         """
         self.units = units
+        self.archive_idx = archive_idx
         self.addr = addr
         self.size = size
 
@@ -101,74 +103,96 @@ class TextScript:
         :param sects_s: list of command dictionaries using the secondary interpreter
         :return: TextScript object representation
         """
-        units = []  # text script discrete string/cmd units
-        end_script = False  # true when an E6 is detected
         addr = bin_file.tell()
 
-        def before_end_script():
-            if size is None:
-                return not end_script
+        def in_script(bin_file, byte, size: int) -> bool:
+            """
+            checks if the script has ended by checking for the current presence of an end_script command, or
+            if the script size has been reached
+            :param bin_file: the file reading the bytecode from
+            :param byte: current byte in the bytecode
+            :param size: size of the textscript
+            :return: true if we haven't reached the end of this textscript
+            """
+            if not size: # zero or None
+                return byte != b'\xE6'
             else:
-                return not end_script and bin_file.tell() < addr + size
+                return byte != b'\xE6' and bin_file.tell() < addr + size
 
-        def before_string_term():
-            return byte and (ord(byte) < 0xE5 or ord(byte) == 0xE6 or ord(byte) == 0xE9)
+        def in_game_string_range(byte) -> bool:
+            return byte is not b'' and (ord(byte) < 0xE5 or ord(byte) == 0xE6 or ord(byte) == 0xE9)
 
-        while before_end_script():
-            # advance bytecode
-            byte = bin_file.read(1)
-            # read string
-            string = b''
+        # process TextScript units (commands or strings)
+        byte = bin_file.read(1)
+        units = []  # text script discrete string/cmd units
+        while in_script(bin_file, byte, size):
+            def read_string_lines(bin_file, byte, size):
+                out = []
+                string = b''
+                # we need to force shut this down, due to the rare case of scripts ending mid-string...
+                while in_script(bin_file, byte, size) and in_game_string_range(byte):
+                    # not a command, process string
+                    string = string + byte
+                    if ord(byte) == 0xE9:
+                        # separate strings by line
+                        out.append(GameString(string))
+                        string = b''
+                    byte = bin_file.read(1)
 
-            while before_end_script() and before_string_term():
-                # not a command, process string
-                string = string + byte
-                if ord(byte) == 0xE9:
-                    # separate strings by line
-                    units.append(GameString(string))
-                    string = b''
-                if ord(byte) == 0xE6:
-                    # terminate script
-                    end_script = True
-                    break
-                byte = bin_file.read(1)
+                # a string may contain an end_script character, even though it terminates our search
+                if byte == b'\xE6':
+                    string = string + byte
 
-            if string:
-                units.append(GameString(string))
+                if string != b'':
+                    out.append(GameString(string))
+
+                return out, byte
+
+            if in_game_string_range(byte):
+                # read strings, which may be multiple line-separated units
+                strings, byte = read_string_lines(bin_file, byte, size)
+                if strings is not []:
+                    units.extend(strings)
+                    # make sure we didn't encounter an end_script command, otherwise our unit processing is over
+                    if byte == b'\xE6':
+                        break
+            else:
+                # read current bytecode command
+                units.append(TextScriptCommand.read(bin_file, byte, sects, sects_s,
+                                                    TextScriptCommand.guess_interpreter(bin_file, byte)))
+
+            # TODO check: is this a valid check?
             if byte == b'':
                 error(TextScriptException, 'error: reached end of file before script end', critical=True)
                 break
 
-            # current bytecode command
-            cmd = byte
+            # advance byte code
+            byte = bin_file.read(1)
 
-            if ord(cmd) == 0xE6:
-                continue  # accounted for in string
-
-            # read command
-            units.append(TextScriptCommand.read(bin_file, cmd, sects, sects_s,
-                                                TextScriptCommand.guess_interpreter(bin_file, cmd)))
-
-            if ord(cmd) == 0xE6:
-                end_script = True
-                continue  # accounted for in string
+        # in case the last bytecode command is an end_script (empty script or outside string)
+        last_unit_is_string = lambda: len(units) > 0 and type(units[-1]) == GameString
+        if byte == b'\xE6' and not last_unit_is_string():
+            # read current bytecode command
+            units.append(TextScriptCommand.read(bin_file, byte, sects, sects_s,
+                                                TextScriptCommand.guess_interpreter(bin_file, byte)))
 
         # compute size if it was not provided
         if size is None:
             size = bin_file.tell() - addr
 
-        return TextScript(units, addr, size)
+        return TextScript(units, id, addr, size)
 
     def build(self) -> str:
         """
         builds the TextScript into a text format
         """
-        out = '\ttext_script {0}, scr_{0}\n'.format(self.addr) # FIXME: update by giving id to this object
+        out = '\ttext_script {0}, scr_{0}\n'.format(self.archive_idx)
 
         # build units
         for unit in self.units:
             if type(unit) is GameString:
                 if len(unit.data) == 1 and unit.data[0] == 0xE6:
+                    # for empty scripts, we just put the end script command instead of representing it as an empty string
                     s = TextScriptCommand.get_cmd_macro(unit.data, b'', self.sects, self.sects_s, False)
                 else:
                     s = '.string "%s"' % unit.to_string()
@@ -270,13 +294,13 @@ class TextScriptArchive:
         # build rel. pointer macros
         rel_pointers_macro = ''
         item_idx = 0
-        for p in self.rel_pointers:
+        for i, p in enumerate(self.rel_pointers):
             # new macro every 16 items
             if item_idx % 16 == 0:
                 if len(rel_pointers_macro) > 2:
                     rel_pointers_macro = rel_pointers_macro[:-2]
                 rel_pointers_macro += '\n\ttext_script_rel_pointers '
-            rel_pointers_macro += '%d, ' % rel_pointer_ids[p]
+            rel_pointers_macro += '%d, ' % i
             item_idx += 1
         rel_pointers_macro = rel_pointers_macro[:-2] # remove tail ', '
         out += rel_pointers_macro + '\n'
@@ -336,10 +360,17 @@ class TextScriptArchive:
             else:
                 size = None
 
-            # read text script
-            if size == 0:
-                scripts.append(TextScript([], ptr, 0))
-            scripts.append(TextScript.read(bin_file, size, sects, sects_s))
+            # make sure when reading each script that we reached its location
+            if bin_file.tell() == ptr:
+                if size == 0:
+                    scripts.append(TextScript([], i, ptr, 0))
+                else:
+                    scripts.append(TextScript.read(bin_file, size, i, sects, sects_s))
+            else:
+                # invalid state
+                # TODO refactor: to TextScriptError
+                raise TextScriptException('invalid state: reading a script in a different location from its pointer {0} != {1}'
+                                          .format(hex(bin_file.tell()), hex(ptr)))
 
         # create Script object
         return TextScriptArchive(rel_pointers, scripts, address, bin_file.tell() - address, sects, sects_s)
@@ -642,7 +673,7 @@ class GameString:
         for i in range(len(tbl), 0xEA):
             tbl.append('\\x%X' % i)
 
-        tbl[0xE6] = '$'
+        tbl[0xE6] = '$' # for shortness, represent the end of script as a '$' in strings
         tbl[0xE9] = '\\n'
         GameString.get_tbl.tbl = tbl
 

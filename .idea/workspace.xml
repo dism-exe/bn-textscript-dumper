@@ -22,6 +22,9 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="HierarchyBrowserManager">
+    <option name="SORT_ALPHABETICALLY" value="true" />
+  </component>
   <component name="ProjectId" id="1QoNpErrDFQc5b0gDFmLfnRnFkf" />
   <component name="PropertiesComponent">
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
@@ -61,7 +64,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="Unittests for text_script_dumper_test.CommandParsingTests.testConflictedCommands" type="tests" factoryName="Unittests" temporary="true" nameIsGenerated="true">
+    <configuration name="Unittests for text_script_dumper_test.RegressionTests" type="tests" factoryName="Unittests" temporary="true" nameIsGenerated="true">
       <module name="bn_textscript_dumper" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -71,7 +74,35 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="_new_additionalArguments" value="&quot;&quot;" />
-      <option name="_new_target" value="&quot;text_script_dumper_test.CommandParsingTests.testConflictedCommands&quot;" />
+      <option name="_new_target" value="&quot;text_script_dumper_test.RegressionTests&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <method v="2" />
+    </configuration>
+    <configuration name="Unittests for text_script_dumper_test.RegressionTests.testAgbasmOutput" type="tests" factoryName="Unittests" temporary="true" nameIsGenerated="true">
+      <module name="bn_textscript_dumper" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/tests" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;text_script_dumper_test.RegressionTests.testAgbasmOutput&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <method v="2" />
+    </configuration>
+    <configuration name="Unittests for text_script_dumper_test.RegressionTests.test_TestScriptFolderNames" type="tests" factoryName="Unittests" temporary="true" nameIsGenerated="true">
+      <module name="bn_textscript_dumper" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/tests" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;text_script_dumper_test.RegressionTests.test_TestScriptFolderNames&quot;" />
       <option name="_new_targetType" value="&quot;PYTHON&quot;" />
       <method v="2" />
     </configuration>
@@ -92,10 +123,16 @@
     <recent_temporary>
       <list>
         <item itemvalue="Python tests.Unittests in text_script_dumper_test.py" />
+        <item itemvalue="Python tests.Unittests for text_script_dumper_test.RegressionTests.test_TestScriptFolderNames" />
+        <item itemvalue="Python tests.Unittests for text_script_dumper_test.RegressionTests.testAgbasmOutput" />
+        <item itemvalue="Python tests.Unittests for text_script_dumper_test.RegressionTests" />
         <item itemvalue="Python.text_script_dumper" />
-        <item itemvalue="Python tests.Unittests for text_script_dumper_test.CommandParsingTests.testConflictedCommands" />
       </list>
     </recent_temporary>
+  </component>
+  <component name="StructureViewFactory">
+    <option name="AUTOSCROLL_FROM_SOURCE" value="true" />
+    <option name="ACTIVE_ACTIONS" value=",SHOW_INHERITED" />
   </component>
   <component name="SvnConfiguration">
     <configuration />
@@ -122,5 +159,43 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/tests/text_script_dumper_test.py</url>
+          <line>53</line>
+          <option name="timeStamp" value="16" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/tests/text_script_dumper_test.py</url>
+          <line>47</line>
+          <option name="timeStamp" value="17" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <condition expression="i == 8" language="Python" />
+          <url>file://$PROJECT_DIR$/text_script_dumper.py</url>
+          <line>357</line>
+          <option name="timeStamp" value="19" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <condition expression="not byte" language="Python" />
+          <url>file://$PROJECT_DIR$/text_script_dumper.py</url>
+          <line>150</line>
+          <option name="timeStamp" value="20" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/text_script_dumper.py</url>
+          <line>371</line>
+          <option name="timeStamp" value="21" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+    <watches-manager>
+      <configuration name="tests">
+        <watch expression="hex(byte)" language="Python" />
+      </configuration>
+    </watches-manager>
   </component>
 </project>

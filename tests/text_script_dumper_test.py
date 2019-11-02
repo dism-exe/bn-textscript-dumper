@@ -26,8 +26,7 @@ class RegressionTests(unittest.TestCase):
         data = textArchive.serialize()
         for i in range(0, textArchive.size):
             actual_data += byte_stream.read(1)
-            if i in textArchive.rel_pointers:
-                print('[rel. pointer] text_script %d (0x%x)' % (sorted(list(set(textArchive.rel_pointers))).index(i), i))
+            # if i in textArchive.rel_pointers: print('[rel. pointer] text_script %d (0x%x)' % (sorted(list(set(textArchive.rel_pointers))).index(i), i))
             if i < 2*len(textArchive.rel_pointers):
                 continue
 
@@ -35,7 +34,7 @@ class RegressionTests(unittest.TestCase):
                 # returns a slice with the last :window: elements up to :cur: inclusive or since the begenning
                 return byte_str[max(cur-window, 0):cur+1]
 
-            print(textArchive.build())
+            # print(textArchive.build())
 
             self.assertEqual(actual_data[i], data[i],
                              'compilation data mismatch at byte 0x%0x\nexpected slice:%s\nactual slice:  %s'
@@ -49,8 +48,8 @@ class RegressionTests(unittest.TestCase):
             textScript = TextScriptArchive.read_script(0, bin_file, self.ini_dir)
             script = textScript.build()
 
-            print('[script]')
-            print(script, hex(textScript.size))
+            # print('[script]')
+            # print(script, hex(textScript.size))
 
             with open(self.test_data_dir + test_name + '.s', 'r', encoding='utf-8') as f:
                 lines = f.readlines()
