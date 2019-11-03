@@ -179,6 +179,8 @@ class TextScript:
             """
             checks if the script has ended by checking for the current presence of an end_script command, or
             if the script size has been reached
+            in the absense of size, end_script is the only sign to termination. However, size overrides it.
+            it is possible for a command to come after end_script in a script.
             :param bin_file: the file reading the bytecode from
             :param byte: current byte in the bytecode
             :param size: size of the textscript
@@ -187,7 +189,7 @@ class TextScript:
             if not size: # zero or None
                 return byte != b'\xE6'
             else:
-                return byte != b'\xE6' and bin_file.tell() < addr + size
+                return bin_file.tell() < addr + size
 
         def is_valid_game_string_char(byte) -> bool:
             return byte is not b'' and (ord(byte) < 0xE5 or ord(byte) == 0xE6 or ord(byte) == 0xE9)
@@ -267,7 +269,7 @@ class TextScript:
                     s = '.string "%s"' % unit.to_string()
                 if s == '':
                     raise TextScriptException('invalid string output for %s' % unit)
-                out += '\t' + s
+                out += '\t' + s + '\n'
             elif type(unit) is TextScriptCommand:
                 name = unit.macro
                 s = '%s ' % name
@@ -281,7 +283,7 @@ class TextScript:
                 s = s.rstrip()
                 if s == '':
                     raise TextScriptException('invalid string output for %s' % unit)
-                out += '\t' + s
+                out += '\t' + s + '\n'
             else:
                 raise TextScriptException('invalid unit type')
 
@@ -378,7 +380,7 @@ class TextScriptArchive:
             out += text_script.build() + '\n'
 
         # text scripts are always aligned by 4
-        out += '\n\t.balign 4, 0'
+        out += '\t.balign 4, 0'
 
         return out
 

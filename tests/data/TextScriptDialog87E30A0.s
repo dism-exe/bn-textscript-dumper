@@ -1,9 +1,8 @@
-	text_script_start unk_0 // TODO: change this if label is named different
+    text_script_start unk_0 // TODO: change this if label is named different
 
-	text_script_rel_pointers 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3
-	text_script_rel_pointers 4, 4, 4, 4, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
-	text_script_rel_pointers 16, 17, 18, 19, 20, 21, 22, 23
-
+	text_script_rel_pointers 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+	text_script_rel_pointers 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+	text_script_rel_pointers 32, 33, 34, 35, 36, 37, 38, 39
 	text_script 0, scr_0
 	ts_mugshot_show 0x4D
 	ts_msg_open
@@ -12,13 +11,29 @@
 	ts_end
 
 	text_script 1, scr_1
+
+	text_script 2, scr_2
+
+	text_script 3, scr_3
+
+	text_script 4, scr_4
+
+	text_script 5, scr_5
 	ts_mugshot_show 0x4D
 	ts_msg_open
 	.string "Hey,hang tough,Lan!!"
 	ts_key_wait 0x0
 	ts_end
 
-	text_script 2, scr_2
+	text_script 6, scr_6
+
+	text_script 7, scr_7
+
+	text_script 8, scr_8
+
+	text_script 9, scr_9
+
+	text_script 10, scr_10
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	ts_text_speed 0x1
@@ -46,7 +61,15 @@
 	ts_wait_o_w_var 0x2, 0x81
 	ts_end
 
-	text_script 3, scr_3
+	text_script 11, scr_11
+
+	text_script 12, scr_12
+
+	text_script 13, scr_13
+
+	text_script 14, scr_14
+
+	text_script 15, scr_15
 	ts_mugshot_show 0x0
 	ts_msg_open
 	.string "Mr.Prog's in the\n"
@@ -55,7 +78,15 @@
 	ts_key_wait 0x0
 	ts_end
 
-	text_script 4, scr_4
+	text_script 16, scr_16
+
+	text_script 17, scr_17
+
+	text_script 18, scr_18
+
+	text_script 19, scr_19
+
+	text_script 20, scr_20
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "HUH? I'M IN THE WAY?\n"
@@ -65,7 +96,7 @@
 	ts_flag_set 0x98, 0xD
 	ts_end
 
-	text_script 5, scr_5
+	text_script 21, scr_21
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "IN THE WAY?\n"
@@ -74,7 +105,7 @@
 	ts_flag_set 0x99, 0xD
 	ts_end
 
-	text_script 6, scr_6
+	text_script 22, scr_22
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "I'M WHAT!? SPEAK UP!\n"
@@ -84,7 +115,7 @@
 	ts_flag_set 0x9A, 0xD
 	ts_end
 
-	text_script 7, scr_7
+	text_script 23, scr_23
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "AM I BLOCKING YOU?\n"
@@ -93,7 +124,7 @@
 	ts_flag_set 0x9B, 0xD
 	ts_end
 
-	text_script 8, scr_8
+	text_script 24, scr_24
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "I'M A BLOCK\n"
@@ -103,7 +134,7 @@
 	ts_flag_set 0x9C, 0xD
 	ts_end
 
-	text_script 9, scr_9
+	text_script 25, scr_25
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "DON'T YOU HATE IT\n"
@@ -113,7 +144,7 @@
 	ts_flag_set 0x9D, 0xD
 	ts_end
 
-	text_script 10, scr_10
+	text_script 26, scr_26
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "YOU WANT ME TO MOVE?\n"
@@ -123,7 +154,7 @@
 	ts_flag_set 0x9E, 0xD
 	ts_end
 
-	text_script 11, scr_11
+	text_script 27, scr_27
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "OH,I'M TERRIBLY\n"
@@ -133,7 +164,7 @@
 	ts_flag_set 0x9F, 0xD
 	ts_end
 
-	text_script 12, scr_12
+	text_script 28, scr_28
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "DO YOU NEED TO GET\n"
@@ -143,7 +174,7 @@
 	ts_flag_set 0xA0, 0xD
 	ts_end
 
-	text_script 13, scr_13
+	text_script 29, scr_29
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "AH,I WAS ONLY TRYING\n"
@@ -153,7 +184,7 @@
 	ts_flag_set 0xA1, 0xD
 	ts_end
 
-	text_script 14, scr_14
+	text_script 30, scr_30
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "WOW,A PRO! I WANT TO\n"
@@ -163,7 +194,7 @@
 	ts_flag_set 0xA2, 0xD
 	ts_end
 
-	text_script 15, scr_15
+	text_script 31, scr_31
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "I'M BLOCKING YOU?\n"
@@ -173,7 +204,7 @@
 	ts_flag_set 0xA3, 0xD
 	ts_end
 
-	text_script 16, scr_16
+	text_script 32, scr_32
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "I DON'T KNOW HOW TO\n"
@@ -183,7 +214,7 @@
 	ts_flag_set 0xA4, 0xD
 	ts_end
 
-	text_script 17, scr_17
+	text_script 33, scr_33
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "THANK YOU FOR\n"
@@ -193,7 +224,7 @@
 	ts_flag_set 0xA5, 0xD
 	ts_end
 
-	text_script 18, scr_18
+	text_script 34, scr_34
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "DO YOU THINK I'M\n"
@@ -203,7 +234,7 @@
 	ts_flag_set 0xA6, 0xD
 	ts_end
 
-	text_script 19, scr_19
+	text_script 35, scr_35
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "THOU REQUIRES THAT\n"
@@ -213,7 +244,7 @@
 	ts_flag_set 0xA7, 0xD
 	ts_end
 
-	text_script 20, scr_20
+	text_script 36, scr_36
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "WHAT'S SO IMPORTANT\n"
@@ -223,7 +254,7 @@
 	ts_flag_set 0xA8, 0xD
 	ts_end
 
-	text_script 21, scr_21
+	text_script 37, scr_37
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "YOU LOOKIN' AT ME?\n"
@@ -233,7 +264,7 @@
 	ts_flag_set 0xA9, 0xD
 	ts_end
 
-	text_script 22, scr_22
+	text_script 38, scr_38
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "OH,JULIET,JULIET...\n"
@@ -243,7 +274,7 @@
 	ts_flag_set 0xAA, 0xD
 	ts_end
 
-	text_script 23, scr_23
+	text_script 39, scr_39
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "TO BLOCK,OR NOT TO\n"
