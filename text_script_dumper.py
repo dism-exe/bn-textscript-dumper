@@ -257,7 +257,7 @@ class TextScript:
         """
         builds the TextScript into a text format
         """
-        out = '\ttext_script {0}, scr_{0}\n'.format(self.archive_idx)
+        out = '\tdef_text_script scr_{0}\n'.format(self.archive_idx)
 
         # build units
         for unit in self.units:
@@ -349,31 +349,7 @@ class TextScriptArchive:
         """
         :return: the text script archive as a string
         """
-        out = '\ttext_script_start unk_%X // TODO: change this if label is named different\n' % self.addr
-
-        # assign unique ids to each pointer for reference
-        rel_pointer_ids = {}
-        last_pointer = 0
-        i = 0
-        for p in sorted(self.rel_pointers):
-            if p != last_pointer:
-                rel_pointer_ids[p] = i
-                i += 1
-            last_pointer = p
-
-        # build rel. pointer macros
-        rel_pointers_macro = ''
-        item_idx = 0
-        for i, p in enumerate(self.rel_pointers):
-            # new macro every 16 items
-            if item_idx % 16 == 0:
-                if len(rel_pointers_macro) > 2:
-                    rel_pointers_macro = rel_pointers_macro[:-2]
-                rel_pointers_macro += '\n\ttext_script_rel_pointers '
-            rel_pointers_macro += '%d, ' % i
-            item_idx += 1
-        rel_pointers_macro = rel_pointers_macro[:-2] # remove tail ', '
-        out += rel_pointers_macro + '\n'
+        out = '\ttext_archive_start\n\n'
 
         # build text scripts
         for text_script in self.text_scripts:

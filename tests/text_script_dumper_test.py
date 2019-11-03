@@ -47,6 +47,12 @@ class RegressionTests(unittest.TestCase):
         with open(self.test_data_dir + test_name + '.bin', 'rb') as bin_file:
             textScript = TextScriptArchive.read_script(self.command_context, 0, bin_file)
             script = textScript.build()
+            end_addr = textScript.addr + textScript.size
+
+            # write output to file
+            with open(self.test_data_dir + 'out/' + test_name + '.s', 'w') as out_file:
+                out_file.write(script)
+                out_file.write('\n' + hex(end_addr))
 
             # print('[script]')
             # print(script, hex(textScript.size))
@@ -66,7 +72,6 @@ class RegressionTests(unittest.TestCase):
                         cur_script_idx += 1
                     self.assertEqual(script[i].strip(), lines[i].strip(), 'mismatch in script %d' % cur_script_idx)
 
-                end_addr = textScript.addr + textScript.size
                 self.assertEqual(int(lines[-1], 16), end_addr, 'end address mismatch')
                 self.assertEqual(len(script), len(lines) - 1, 'content length mismatch')
             bin_file.seek(0)
