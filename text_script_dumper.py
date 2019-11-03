@@ -9,6 +9,58 @@ config = configparser.ConfigParser()
 config.read('config.ini')
 config.read('../config.ini') # in case of testing
 
+
+def read_custom_ini(ini_path: str) -> list:
+    # type: (str) -> list(dict(str, str))
+    sections = []
+    with open(ini_path, 'r') as ini_file:
+        for line in ini_file.readlines():
+            # section
+            if line.startswith('[') and ']' in line:
+                sections.append({})
+                sections[-1]['section'] = line[line.index('[') + 1:line.index(']')]
+            elif '=' in line:
+                key = line[:line.index('=')].strip()
+                val = line[line.index('=') + 1:].strip()
+                sections[-1][key] = val
+    return sections
+
+
+def gen_macros(config_ini_path):
+    sects = read_custom_ini(config_ini_path)
+    # TODO: generate correct dynamic ts_select
+    macros = ''
+    for sect in sects:
+        if sect['section'] in ['Command', 'Extension']:
+            base = []
+            mask = []
+            for b in sect['base'].split(' '): base.append(int(b, 16))
+            for b in sect['mask'].split(' '): mask.append(int(b, 16))
+            name = 'ts_'  + sect['name']
+            # convert to snake case
+            for c in name:
+                if c.isupper():
+                    name = name.replace(c, '_%c' % c.lower())
+            # figure out how many parameters
+            params = ''
+            i = 0
+            for b in mask:
+                if b != 0xFF:
+                    params += 'p%d:req, ' % i
+                    i += 1
+            if params.endswith(', '): params = params[:-2]
+            macros += '.macro %s %s\n' % (name, params)
+            # define base bytes
+            bytes = '.byte '
+            for b in base:
+                bytes += '0x%X, ' % b
+            bytes += params.replace('p', '\p').replace(':req', '')
+            if bytes.endswith(', '): bytes = bytes[:-2]
+            macros += '\t' + bytes + '\n'
+            macros += '.endm\n'
+    return macros
+
+
 class ModuleState:
     if path.exists('config.ini'):
         CUR_DIR = ''
@@ -41,6 +93,24 @@ class ModuleState:
 
 
 ModuleState.config = config
+
+
+class CommandContext:
+    sects = read_custom_ini(ModuleState.INI_DIR + 'mmbn6.ini')
+    sects_s = read_custom_ini(ModuleState.INI_DIR + 'mmbn6s.ini')
+
+    def __init__(self, ini_path=None):
+        if ini_path:
+            self.update_command_sects(ini_path)
+
+    def update_command_sects(self, ini_path):
+        """
+        :param sects: list of command dictionaries using the regular interpreter
+        :param sects_s: list of command dictionaries using the secondary interpreter
+        """
+        self.sects = read_custom_ini(ini_path + 'mmbn6.ini')
+        self.sects_s = read_custom_ini(ini_path + 'mmbn6s.ini')
+
 
 def printlocals(locals, halt=False):
     s = ''
@@ -80,27 +150,27 @@ error.list = []
 
 
 class TextScript:
-    def __init__(self, units: list, archive_idx: int, addr: int, size: int):
+    def __init__(self, command_context: CommandContext, units: list, archive_idx: int, addr: int, size: int):
         """
+        :param command_context: required knowledge to be able to identify and parse commands
         :param units: list of textscript elements: GameString and TextScriptCommand
         :param archive_idx: represents the index of the TextScript in its container TextScriptArchive
         :param addr: the base address of the textscript
         :param size: the size of the text script
         """
+        self.command_context = command_context
         self.units = units
         self.archive_idx = archive_idx
         self.addr = addr
         self.size = size
 
     @staticmethod
-    def read(bin_file, size: int, archive_idx: int, sects, sects_s):
+    def read(command_context: CommandContext, bin_file, size: int, archive_idx: int):
         """
         reads a textscript segment that terminates with E6 or has a known size
         :param bin_file: binary file stream to read the file from
         :param size: if None, this is computed as the text script is parsed, and size is determined
                      at the first occurance of an E6 (or termination command)
-        :param sects: list of command dictionaries using the regular interpreter
-        :param sects_s: list of command dictionaries using the secondary interpreter
         :return: TextScript object representation
         """
         addr = bin_file.tell()
@@ -167,7 +237,7 @@ class TextScript:
                         continue
             else:
                 # read current bytecode command
-                units.append(TextScriptCommand.read(bin_file, byte, sects, sects_s,
+                units.append(TextScriptCommand.read(command_context, bin_file, byte,
                                                     TextScriptCommand.guess_interpreter(bin_file, byte)))
 
             # do while the script has not ended
@@ -179,7 +249,7 @@ class TextScript:
         if size is None:
             size = bin_file.tell() - addr
 
-        return TextScript(units, archive_idx, addr, size)
+        return TextScript(command_context, units, archive_idx, addr, size)
 
     def build(self) -> str:
         """
@@ -192,7 +262,7 @@ class TextScript:
             if type(unit) is GameString:
                 if len(unit.data) == 1 and unit.data[0] == 0xE6:
                     # for empty scripts, we just put the end script command instead of representing it as an empty string
-                    s = TextScriptCommand.get_cmd_macro(unit.data, b'', self.sects, self.sects_s, False)
+                    s = TextScriptCommand.get_cmd_macro(self.command_context, unit.data, b'', False)
                 else:
                     s = '.string "%s"' % unit.to_string()
                 if s == '':
@@ -252,13 +322,12 @@ class TextScript:
 
 
 class TextScriptArchive:
-    def __init__(self, rel_pointers: list, text_scripts: list, addr: int, size: int, sects: list, sects_s: list):
+    def __init__(self, command_context: CommandContext, rel_pointers: list, text_scripts: list, addr: int, size: int):
+        self.command_context = command_context
         self.rel_pointers = rel_pointers
         self.text_scripts = text_scripts
         self.addr = addr
         self.size = size
-        self.sects = sects
-        self.sects_s = sects_s
 
 
     def serialize(self) -> bytes:
@@ -339,11 +408,10 @@ class TextScriptArchive:
         return rel_pointers
 
     @staticmethod
-    def read(bin_file, sects, sects_s, size: int=None) -> 'TextScriptArchive':
+    def read(command_context: CommandContext, bin_file, size: int=None) -> 'TextScriptArchive':
         """
+        :param command_context: necessary data to parse commands
         :param bin_file: binary file stream to read the file from
-        :param sects: list of command dictionaries using the regular interpreter
-        :param sects_s: list of command dictionaries using the secondary interpreter
         :param size: if not None, the script archive will end at the specified size
         :return: TextScriptArchive object representation
         """
@@ -362,9 +430,9 @@ class TextScriptArchive:
             # make sure when reading each script that we reached its location
             if bin_file.tell() == ptr:
                 if size == 0:
-                    scripts.append(TextScript([], i, ptr, 0))
+                    scripts.append(TextScript(command_context, [], i, ptr, 0))
                 else:
-                    scripts.append(TextScript.read(bin_file, size, i, sects, sects_s))
+                    scripts.append(TextScript.read(command_context, bin_file, size, i))
             else:
                 pass
                 # invalid state
@@ -373,22 +441,17 @@ class TextScriptArchive:
                                           .format(hex(bin_file.tell()), hex(ptr)))
 
         # create Script object
-        return TextScriptArchive(rel_pointers, scripts, address, bin_file.tell() - address, sects, sects_s)
+        return TextScriptArchive(command_context, rel_pointers, scripts, address, bin_file.tell() - address)
 
 
     @staticmethod
-    def read_script(ea: int, bin_file, ini_path, size: int=None) -> 'TextScriptArchive':
+    def read_script(command_context: CommandContext, ea: int, bin_file, size: int=None) -> 'TextScriptArchive':
         # ensure ea is file relative
         ea &= ~0x8000000
         bin_file.seek(ea)
 
-        if not ini_path.endswith('/'):
-            ini_path += '/'
-
         error.list = []
-        sects = read_custom_ini(ini_path + 'mmbn6.ini')
-        sects_s = read_custom_ini(ini_path + 'mmbn6s.ini')
-        return TextScriptArchive.read(bin_file, sects, sects_s, size)
+        return TextScriptArchive.read(command_context, bin_file, size)
 
 
 class TextScriptCommand:
@@ -424,7 +487,7 @@ class TextScriptCommand:
         return compiled_cmd
 
     @staticmethod
-    def read(bin_file, cmd: bytes, sects, sects_s, with_interpreter_s) -> 'TextScriptCommand':
+    def read(command_context: CommandContext, bin_file, cmd: bytes, with_interpreter_s) -> 'TextScriptCommand':
         """
         use guess_interpreter to determine likely value of with_interpreter_s.
         with_interpreter_s is the distinction between dilog and visual commands.
@@ -432,7 +495,7 @@ class TextScriptCommand:
         """
         attempts to read the command on both interpreters, given priority
         """
-        select_sects = lambda select: [sects, sects_s][select]
+        select_sects = lambda select: [command_context.sects, command_context.sects_s][select]
         out = TextScriptCommand.read_cmd_from_sects(bin_file, cmd, select_sects(with_interpreter_s))
         interpreter_used = with_interpreter_s
         if not out:
@@ -442,7 +505,7 @@ class TextScriptCommand:
             raise InvalidTextScriptCommandException(
                   'invalid cmd %s detected at 0x%x' % (cmd, bin_file.tell()))
         return TextScriptCommand(out[0], out[1], interpreter_used,
-                                 TextScriptCommand.get_cmd_macro(out[0], out[1], sects, sects_s, interpreter_used))
+                                 TextScriptCommand.get_cmd_macro(command_context, out[0], out[1], interpreter_used))
 
     @staticmethod
     def guess_interpreter(bin_file, cmd: bytes) -> bool:
@@ -552,15 +615,14 @@ class TextScriptCommand:
             return len(cmd) + len(params)
 
     @staticmethod
-    def get_cmd_macro(cmd: bytes, params: bytes, sects: dict, sects_s: dict, prioritize_s: bool) -> str:
+    def get_cmd_macro(command_context: CommandContext, cmd: bytes, params: bytes, prioritize_s: bool) -> str:
         """
         gets the command macro given a full description of the command (all bytes involving the set mask)
-        :param sects: array of dictionaries representing ini specs of commands
+        :param command_context: Contains necessary information about commands, including the database sections for both interpreters
         :param cmd: byte array that must contain at least
-        :param sects_s: for commands running the alternatsects.erpreter. This is always prioritized over sects.
         :return: string representing the macro for the command
         """
-        select_sects = lambda select: [sects, sects_s][select]
+        select_sects = lambda select: [command_context.sects, command_context.sects_s][select]
         sect = TextScriptCommand.find_cmd(cmd, params, select_sects(prioritize_s))
         if not sect:
             sect = TextScriptCommand.find_cmd(cmd, params, select_sects(not prioritize_s))
@@ -694,55 +756,6 @@ class GameString:
         return out
 
 
-def read_custom_ini(ini_path: str) -> list:
-    # type: (str) -> list(dict(str, str))
-    sections = []
-    with open(ini_path, 'r') as ini_file:
-        for line in ini_file.readlines():
-            # section
-            if line.startswith('[') and ']' in line:
-                sections.append({})
-                sections[-1]['section'] = line[line.index('[') + 1:line.index(']')]
-            elif '=' in line:
-                key = line[:line.index('=')].strip()
-                val = line[line.index('=') + 1:].strip()
-                sections[-1][key] = val
-    return sections
-
-def gen_macros(config_ini_path):
-    sects = read_custom_ini(config_ini_path)
-    # TODO: generate correct dynamic ts_select
-    macros = ''
-    for sect in sects:
-        if sect['section'] in ['Command', 'Extension']:
-            base = []
-            mask = []
-            for b in sect['base'].split(' '): base.append(int(b, 16))
-            for b in sect['mask'].split(' '): mask.append(int(b, 16))
-            name = 'ts_'  + sect['name']
-            # convert to snake case
-            for c in name:
-                if c.isupper():
-                    name = name.replace(c, '_%c' % c.lower())
-            # figure out how many parameters
-            params = ''
-            i = 0
-            for b in mask:
-                if b != 0xFF:
-                    params += 'p%d:req, ' % i
-                    i += 1
-            if params.endswith(', '): params = params[:-2]
-            macros += '.macro %s %s\n' % (name, params)
-            # define base bytes
-            bytes = '.byte '
-            for b in base:
-                bytes += '0x%X, ' % b
-            bytes += params.replace('p', '\p').replace(':req', '')
-            if bytes.endswith(', '): bytes = bytes[:-2]
-            macros += '\t' + bytes + '\n'
-            macros += '.endm\n'
-    return macros
-
 if __name__ == '__main__':
     import codecs
     import argparse
@@ -764,10 +777,14 @@ if __name__ == '__main__':
     # defaults
     if not args.file:
         args.file = ModuleState.ROM_PATH
+
+    # create the command context by reading from the command database ini
     if not args.ini_dir:
-        args.ini_dir = ModuleState.INI_DIR
-    if args.ini_dir and args.ini_dir[-1] != '/':
-        args.ini_dir = args.ini_dir + '/'
+        command_context = CommandContext()
+    else:
+        if args.ini_dir and args.ini_dir[-1] != '/':
+            args.ini_dir = args.ini_dir + '/'
+        command_context = CommandContext(args.ini_dir)
 
     def parse_script_size(val):
         words = val.split(' ')
@@ -786,7 +803,7 @@ if __name__ == '__main__':
 
 
     with open(args.file, 'rb') as f:
-        out, end_addr = TextScriptArchive.read_script(args.address, f, args.ini_dir, args.size).display()
+        out, end_addr = TextScriptArchive.read_script(command_context, args.address, f, args.size).display()
     for i in out:
         print(i)
     print(hex(end_addr))

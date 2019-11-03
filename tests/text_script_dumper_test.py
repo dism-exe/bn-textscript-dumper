@@ -5,7 +5,7 @@ from text_script_dumper import *
 class RegressionTests(unittest.TestCase):
     def setUp(self):
         self.test_data_dir = 'data/'
-        self.ini_dir = ModuleState.INI_DIR
+        self.command_context = CommandContext()
         self.rom_path = ModuleState.ROM_PATH
         pass
     def tearDown(self):
@@ -45,7 +45,7 @@ class RegressionTests(unittest.TestCase):
 
     def assertTestFile(self, test_name):
         with open(self.test_data_dir + test_name + '.bin', 'rb') as bin_file:
-            textScript = TextScriptArchive.read_script(0, bin_file, self.ini_dir)
+            textScript = TextScriptArchive.read_script(self.command_context, 0, bin_file)
             script = textScript.build()
 
             # print('[script]')
@@ -110,7 +110,7 @@ class RegressionTests(unittest.TestCase):
     def testAgbasmOutput(self):
         # update agbasm_output.s to test validity of the macro system in some instances
         with open(self.test_data_dir + 'TextScriptChipTrader86C580C' + '.bin', 'rb') as bin_file:
-            text_script = TextScriptArchive.read_script(ea=0, bin_file=bin_file, ini_path=self.ini_dir)
+            text_script = TextScriptArchive.read_script(self.command_context, ea=0, bin_file=bin_file)
             with open(self.rom_path, 'rb') as gba_file:
                 self.assertCompilation(text_script, gba_file, 0x6C580C)
 
@@ -161,13 +161,12 @@ class CommandIdentificationTess(unittest.TestCase):
 
 class CommandParsingTests(unittest.TestCase):
     def setUp(self):
-        self.sects = read_custom_ini('../' + 'mmbn6.ini')
-        self.sects_s = read_custom_ini('../' + 'mmbn6s.ini')
-        self.select_sect = lambda sel: [self.sects, self.sects_s][sel]
+        self.command_context = CommandContext()
+        self.select_sect = lambda sel: [self.command_context.sects, self.command_context.sects_s][sel]
 
     def assertCommandparsed(self, byteStream, cmd, params, cmdName, prioritize_s):
         startAddr = byteStream.tell()
-        out = TextScriptCommand.read(byteStream, byteStream.read(1), self.sects, self.sects_s, prioritize_s)
+        out = TextScriptCommand.read(self.command_context, byteStream, byteStream.read(1), prioritize_s)
         if not out:
             self.fail('%s: could not read commad: %s %s' % (cmdName, cmd, params))
         self.assertEqual(out.cmd, cmd, '%s: invalid command read' % cmdName)
@@ -177,7 +176,7 @@ class CommandParsingTests(unittest.TestCase):
             self.fail('%s: could not find commad section: %s %s' % (cmdName, cmd, params))
         self.assertEqual(sect['name'], cmdName, 'invalid command found')
         self.assertEqual(TextScriptCommand.convert_cmd_name(sect['name']),
-                          TextScriptCommand.get_cmd_macro(cmd, params, self.sects, self.sects_s, prioritize_s),
+                          TextScriptCommand.get_cmd_macro(self.command_context, cmd, params, prioritize_s),
                           '%s: failed to convert the command to the correct name' % (cmdName))
         # print(sect['name'])
         self.assertEqual(byteStream.tell(), startAddr + out.size,

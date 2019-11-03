@@ -2,13 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="1bf178ec-3a3a-4e48-852d-2b0a3bfba14d" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/bn_textscript_dumper.iml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/data/TextScriptFolderNames86cf4ac.s" beforeDir="false" afterPath="$PROJECT_DIR$/tests/data/TextScriptFolderNames86cf4ac.s" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tests/text_script_dumper_test.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/text_script_dumper_test.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/text_script_dumper.py" beforeDir="false" afterPath="$PROJECT_DIR$/text_script_dumper.py" afterDir="false" />
     </list>
@@ -180,12 +174,12 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/text_script_dumper.py</url>
-          <line>371</line>
+          <line>439</line>
           <option name="timeStamp" value="21" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/text_script_dumper.py</url>
-          <line>441</line>
+          <line>504</line>
           <option name="timeStamp" value="23" />
         </line-breakpoint>
       </breakpoints>
