@@ -1,19 +1,120 @@
 # searches for all text script within the ROM, identifies if they're compressed or not,
 # and identifies how they segment together
+import sys
+import os
 import argparse
-import tools.text_script_dumper.text_script_dumper as dumper
-import tools.decompress as decomp
+from typing import List, Union
+import text_script_dumper as dumper
 
-def main():
-    parser = argparse.ArgumentParser(description='Scans the ROM for TextScripts')
-    parser.add_argument('archive_list_file',
-                        help='this file specifies all archives in the ROM.')
-    parser.add_argument('-i', '--input', nargs=1, metavar='input_file',
-                        help='default being baserom.gba')
-    parser.add_argument('-s', '--size', action='store_true',
-                        help='identifies sizes of all the archives and outputs to stdout')
+def error(m):
+    print('error: {m}'.format(**vars()))
+    exit(1)
 
-    args = parser.parse_args()
+def main(argv):
+    parser = argparse.ArgumentParser(description='Scans the ROM for TextScripts', add_help=False)
+    parser.add_argument('rom_file', help='the ROM file to process the archives in')
+    parser.add_argument('archive_list_file', help='this file specifies all archives in the ROM.')
+    parser.add_argument('cmd', type=str, help='command to execute regarding the archive list',)
+
+    # add list of commands and their descriptions to usage
+    help = parser.format_help() + '\n'
+    help += 'available commands:\n'
+    for cmd in filter(lambda key: not key.startswith('__'), Commands.__dict__.keys()):
+        help += "  {0}: {1}\n".format(cmd, getattr(Commands, cmd)(None, None, None, get_desc=True))
+    help += ' \n' # for some reason, I had to add that space for it to add an empty new line
+    parser.usage = help[help.index(':')+1:]
+
+    # when specifying argv, it mustn't contain the program name
+    args = parser.parse_args(argv[1:4])
+
+    getattr(Commands, args.cmd)(args.rom_file, args.archive_list_file, argv[4:])
+
+class Commands:
+    @staticmethod
+    def get_compressed_archives(rom_path, archive_path, argv,  get_desc=False):
+        desc = 'Searchess all archives and returns only the compressed ones'
+        if get_desc:
+            return desc
+
+        parser = argparse.ArgumentParser(description=desc)
+        parser.prog = parser.prog + ' ' + Commands.get_compressed_archives.__name__
+        args = parser.parse_args(argv)
+
+        archives = process_archives(archive_path)
+
+        compressed_archives, regular_archives = separate_archives_based_on_compression(rom_path, archives)
+
+        print(compressed_archives)
+
+        print(len(compressed_archives), len(regular_archives))
+
+    @staticmethod
+    def dump_noncompressed_archives(rom_path, archive_path, argv, get_desc=False):
+        desc = 'Invokes the textscript dumper on all non-compressed archive and outputs collective results'
+        if get_desc:
+            return desc
+
+        parser = argparse.ArgumentParser(description=desc)
+        parser.prog = parser.prog + ' ' + Commands.dump_noncompressed_archives.__name__
+        args = parser.parse_args(argv)
+
+        archives = process_archives(archive_path)
+
+        compressed_archives, regular_archives = separate_archives_based_on_compression(rom_path, archives)
+
+        error_count = 0
+        correct_count = 0
+        with open(rom_path, 'rb') as rom_file:
+            for archive_ptr, archive_size in compressed_archives:
+                    print('@archive {0} (size: {1})'.format('0x%X' % archive_ptr, archive_size))
+                    try:
+                        textscript_archive = dumper.TextScriptArchive.read_script(dumper.CommandContext(), archive_ptr, rom_file)
+                        correct_count += 1
+                        print(textscript_archive.build())
+                    except Exception:
+                        error_count += 1
+
+        print('error_count: %d (%d%%)' % (error_count, 1.0 * error_count / (correct_count + error_count)))
+        print('correct_count: %d' % (correct_count))
+
+        print(len(compressed_archives), len(regular_archives))
+
+
+
+
+def separate_archives_based_on_compression(rom_path, archives):
+    compressed_archives = []
+    regular_archives = []
+    with open(rom_path, 'rb') as rom_file:
+        for archive_ptr, archive_size in archives:
+            # size = getLZ77CompressedSize(rom_file, archive_ptr)
+            size = gbagfx_get_compressed_size_at(rom_file, archive_ptr & ~0x8000000)
+            if size is not None:
+                compressed_archives.append((archive_ptr, size))
+            else:
+                regular_archives.append((archive_ptr, archive_size))
+
+    return compressed_archives, regular_archives
+
+
+def process_archives(archive_path) -> List[int]:
+    """
+    format: lines of @archive <archive_ptr_hex>
+    :return: list of archive pointers
+    """
+
+    out = []
+    processed_unit = False
+    with open(archive_path, 'r') as archive_file:
+        for line in archive_file.readlines():
+            if line.startswith('@archive'):
+                archive_ptr = int(line.split(' ')[1], 16)
+                out.append(archive_ptr)
+            if line.startswith('@size'):
+                size = int(line.split(' ')[1], 16)
+                out[-1] = (out[-1], size)
+
+    return out
 
 def read_archives(archives_path):
     # will segment all text scripts that are contigious
@@ -31,23 +132,107 @@ def read_archives(archives_path):
             }
     return out
 
-
-def try_parse_script(bin_file, addr):
-    try:
-
-        scr = dumper.read('./', bin_file, addr)
-    except Exception:
+def gbagfx_get_compressed_size_at(rom_file, address):
+    decompressed_path = hex(address) + '.compsize.tmp'
+    compressed_path = decompressed_path + '.lz'
+    if gbagfx_decompress_at(rom_file, address, decompressed_path) != 0:
         return None
+    if gbagfx_compress(decompressed_path, compressed_path) != 0:
+        raise IOError('could not compress file')
+    size = os.path.getsize(compressed_path)
+    os.remove(decompressed_path)
+    os.remove(compressed_path)
+    return size
+
+
+def getLZ77CompressedSize(bin_file, compressed_ea):
+    """
+    Iterates the compressed data, and returns its size
+    :param compressed_ea: the linear address of the compressed data
+    :return: its size in bytes or <0 if this is an invalid format, decompressed size
+    """
+    dataHeader = 0
+    original_addr = bin_file.tell()
+    bin_file.seek(compressed_ea)
+    chars = bin_file.read(4)
+    for i in range(len(chars)):
+        dataHeader |= chars[i] << 8*i
+    decompSize = (dataHeader & ~0xFF) >> 8
+
+    # compression type must match
+    if (dataHeader & 0xF0) >> 4 != 1:
+        return -1
+
+    # iterate, and figure out the number of bytes copied
+    size = 0
+    ea = compressed_ea + 4
+    # iterate the blocks and keep count of the data size
+    while size < decompSize:
+        # parse block flags (compressed or not)
+        bin_file.seek(ea)
+        flags = bin_file.read(1)[0]
+        ea += 1
+
+        # iterate the blocks, MSB first.
+        for i in range(7, -1, -1):
+            if flags & (1<<i):
+                # block i is compressed
+                bin_file.seek(ea)
+                chars = bin_file.read(2)
+                block = chars[0] + (chars[1] << 8)
+                size += ((block & 0xF0) >> 4) + 3
+                ea += 2
+                # check that the displacement doesn't underflow
+                disp = ((block & 0xFF00) >> (16-4)) | block & 0xF
+                if size - disp - 1 < 0:
+                    return -2
+            else:
+                # block i is uncompressed, it's just one byte
+                size += 1
+                ea += 1
+            # we might finish decompressing while processing blocks
+            if size >= decompSize:
+                # ensure that the rest of the flags are 0!
+                # this is a practical restriction. (likely true, not technically part of the specs)
+                for j in range(i, -1, -1):
+                    if flags & (1<<j) != 0:
+                        return -3
+                break
+
+    bin_file.seek(original_addr)
+    return (ea - compressed_ea, decompSize)
+
+def gbagfx_decompress_at(rom_file, compressed_data_address: int, output_path: str):
+    # write from compressed data address onwards to a file. This is because size is not known, but the LZ77 decompression
+    # can tell
+    slice_file_path = output_path + '.tmp_slice.lz'
+    with open(slice_file_path, 'wb') as slice_file:
+        rom_file.seek(compressed_data_address)
+        slice_file.write(rom_file.read())
+
+    # decompress file
+    gbagfx_bin = '/home/lan/dev/dis/bn6f/tools/gbagfx/gbagfx'
+    status = os.system('{gbagfx_bin} {slice_file_path} {output_path}'.format(**vars()))
+
+    os.remove(slice_file_path)
+    return status
+
+def gbagfx_compress(input_path: str, output_lz_path: str):
+    if not output_lz_path.endswith('.lz'):
+        raise ValueError('lz_path must end with .lz as that is expected by gbagfx')
+    gbagfx_bin = '/home/lan/dev/dis/bn6f/tools/gbagfx/gbagfx'
+    return os.system('{gbagfx_bin} {input_path} {output_lz_path} '.format(**vars()))
+
 
 def size_scan_archives(bin_file, archives_path):
     archives = read_archives(archives_path)
     for archive_addr in archives.keys():
         bin_file.seek(bin_file)
         # try to determine decompression size
-        size = decomp.getLZ77CompressedSize(archive_addr, bin_file)
+        size = getLZ77CompressedSize(archive_addr, bin_file)
         if size < 0:
             # try to parse it as text script and get the size
             scr = dumper.read('./', )
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv)

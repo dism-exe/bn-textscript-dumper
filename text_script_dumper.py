@@ -5,11 +5,6 @@ from os import path
 import sys
 import configparser
 
-config = configparser.ConfigParser()
-config.read('config.ini')
-config.read('../config.ini') # in case of testing
-
-
 def read_custom_ini(ini_path: str) -> list:
     # type: (str) -> list(dict(str, str))
     sections = []
@@ -61,18 +56,26 @@ def gen_macros(config_ini_path):
     return macros
 
 
+HOME_PATH = '/home/lan/dev/dis/bn_textscript_dumper/'
+config = configparser.ConfigParser()
+config.read(HOME_PATH + 'config.ini')
+
 class ModuleState:
-    if path.exists('config.ini'):
-        CUR_DIR = ''
-    else:
-        CUR_DIR = '../'
-    PROJ_PATH = CUR_DIR + config['Paths']['DissassemblyProjectPath']
+    # TODO fix: specify project path through envrionmental variable?
+    # if path.exists('config.ini'):
+    #     CUR_DIR = ''
+    # else:
+    #     CUR_DIR = '../'
+    PROJ_PATH = HOME_PATH + config['Paths']['DissassemblyProjectPath']
     TBL_PATH = PROJ_PATH + config['Paths']['GameStringTblPath']
-    INI_DIR = CUR_DIR + config['Paths']['CommandDatabaseIniDirPath']
+    INI_DIR = HOME_PATH + config['Paths']['CommandDatabaseIniDirPath']
     ROM_PATH = PROJ_PATH + config['Paths']['RomPath']
     LOG = True
     LOG_FILE = sys.__stdout__
     RAISE_ALL = False
+
+    # base address, such as the text script archive considered
+    address = 0
 
     # the select command is dynamic unlike any other command, so it's its own category
     DYNAMIC_CMDS = [b'\xed']
@@ -91,9 +94,8 @@ class ModuleState:
     # each family carries different masking
     BITFIELD_CMDS = [b'\xfa\x00', b'\xf2']
 
-
+ModuleState.HOME_PATH = HOME_PATH
 ModuleState.config = config
-
 
 class CommandContext:
     sects = read_custom_ini(ModuleState.INI_DIR + 'mmbn6.ini')
@@ -257,7 +259,7 @@ class TextScript:
         """
         builds the TextScript into a text format
         """
-        out = '\tdef_text_script scr_{0}\n'.format(self.archive_idx)
+        out = '\tdef_text_script TextScript{0}_unk{1}\n'.format('%X' % ModuleState.address, self.archive_idx)
 
         # build units
         for unit in self.units:
@@ -386,37 +388,47 @@ class TextScriptArchive:
         return rel_pointers
 
     @staticmethod
-    def read(command_context: CommandContext, bin_file, size: int=None) -> 'TextScriptArchive':
+    def read(command_context: CommandContext, bin_file, archive_size: int=None) -> 'TextScriptArchive':
         """
         :param command_context: necessary data to parse commands
         :param bin_file: binary file stream to read the file from
-        :param size: if not None, the script archive will end at the specified size
+        :param archive_size: if not None, the script archive will end at the specified size
         :return: TextScriptArchive object representation
         """
         address = bin_file.tell()
         rel_pointers = TextScriptArchive.read_relative_pointers(bin_file, address)
         last_script_pointer = max(rel_pointers)
 
+        print('// numScripts: {0}, [{1}, {2}]'.format(len(rel_pointers), hex(rel_pointers[0]), hex(rel_pointers[-1])))
+
         scripts = []
         for i, ptr in enumerate(rel_pointers):
             # determine size of script, if known
             if i < len(rel_pointers)-1:
-                size = rel_pointers[i+1] - ptr
+                script_size = rel_pointers[i + 1] - ptr
             else:
-                size = None
+                script_size = None
+
+            if archive_size:
+                if script_size is None:
+                    script_size = archive_size
+                script_size = min(script_size, archive_size)
 
             # make sure when reading each script that we reached its location
-            if bin_file.tell() == ptr:
-                if size == 0:
+            if bin_file.tell() - address == ptr:
+                if script_size == 0:
                     scripts.append(TextScript(command_context, [], i, ptr, 0))
                 else:
-                    scripts.append(TextScript.read(command_context, bin_file, size, i))
+                    scripts.append(TextScript.read(command_context, bin_file, script_size, i))
             else:
                 pass
                 # invalid state
                 # TODO refactor: to TextScriptError
                 raise TextScriptException('invalid state: reading a script in a different location from its pointer {0} != {1}'
-                                          .format(hex(bin_file.tell()), hex(ptr)))
+                                          .format(hex(bin_file.tell() - address), hex(ptr)))
+
+            if archive_size and bin_file.tell() - address >= archive_size:
+                break
 
         # create Script object
         return TextScriptArchive(command_context, rel_pointers, scripts, address, bin_file.tell() - address)
@@ -741,11 +753,11 @@ if __name__ == '__main__':
     def auto_int(i):
         return int(i, 0)
 
-    # usage: text_script_dumper.py [-h] [-f FILE] [-i INI_DIR] address
     parser = argparse.ArgumentParser(description='TextScript dumper for Megaman Battle Network')
     parser.add_argument('address', type=auto_int, help='address of text script archive in file')
-    parser.add_argument('-f', '--file', help='file to parse from, likely the ROM.')
+    parser.add_argument('-f', '--file', help='file to parse from, usually the ROM.')
     parser.add_argument('-i', '--ini_dir', help='directory of command database ini files to use')
+    parser.add_argument('-o', '--output', help='output file to write to')
     parser.add_argument('-s', '--size', type=auto_int, help='the size of script, if known')
     args = parser.parse_args()
 
@@ -768,22 +780,34 @@ if __name__ == '__main__':
         words = val.split(' ')
         return int(words[0], 16), int(words[1], 16)
 
-    # search for if address has a known size in config
-    for key in ModuleState.config['ScriptSizes']:
-        address, size = parse_script_size(ModuleState.config['ScriptSizes'][key])
-        if address == args.address:
-            args.size = size
+    # search for if address has a known size in config ini
+    if not args.size:
+        for key in ModuleState.config['ScriptSizes']:
+            address, size = parse_script_size(ModuleState.config['ScriptSizes'][key])
+            if address == args.address:
+                args.size = size
+
+
+    # setting additional information
+    ModuleState.address = args.address
 
     # '6C580C' # TextScriptChipTrader86C580C
     # '6C67E4' # TextScriptLottery86C67E4
 
-    print(args)
+    # print(args)
 
 
     with open(args.file, 'rb') as f:
-        out, end_addr = TextScriptArchive.read_script(command_context, args.address, f, args.size).display()
-    for i in out:
-        print(i)
-    print(hex(end_addr))
+        text_script_archive: TextScriptArchive = TextScriptArchive.read_script(command_context, args.address, f, args.size)
+
+    if args.output:
+        with open(args.output, 'w') as output_file:
+            output_file.write(text_script_archive.build())
+            output_file.write(hex(text_script_archive.addr + text_script_archive.size))
+    else:
+        print(text_script_archive.build())
+        print(hex(text_script_archive.addr + text_script_archive.size))
+
+    # TODO fix: use a logger instead
     for e in error.list:
         print('error: ' + e)
