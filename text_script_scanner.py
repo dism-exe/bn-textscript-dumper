@@ -1,10 +1,10 @@
-# searches for all text script within the ROM, identifies if they're compressed or not,
-# and identifies how they segment together
 import sys
 import os
+from typing import List, Union, Tuple
 import argparse
-from typing import List, Union
 import text_script_dumper as dumper
+import definitions
+
 
 def error(m):
     print('error: {m}'.format(**vars()))
@@ -42,44 +42,95 @@ class Commands:
 
         archives = process_archives(archive_path)
 
-        compressed_archives, regular_archives = separate_archives_based_on_compression(rom_path, archives)
+        # find the compressed and non-compressed archives and cache the result to disk
+        compressed_archives, regular_archives = cache_separate_archives_based_on_compression(archive_path, rom_path, archives)
 
-        print(compressed_archives)
+        for ptr, size in compressed_archives:
+            print(hex(ptr), size)
 
         print(len(compressed_archives), len(regular_archives))
 
     @staticmethod
-    def dump_noncompressed_archives(rom_path, archive_path, argv, get_desc=False):
+    def dump_archives(rom_path, archive_path, argv, get_desc=False):
         desc = 'Invokes the textscript dumper on all non-compressed archive and outputs collective results'
         if get_desc:
             return desc
 
         parser = argparse.ArgumentParser(description=desc)
-        parser.prog = parser.prog + ' ' + Commands.dump_noncompressed_archives.__name__
+        parser.prog = parser.prog + ' ' + Commands.dump_archives.__name__
+        parser.add_argument('--compressed', action='store_true')
+        parser.add_argument('--noncompressed', action='store_true')
+        parser.add_argument('--error', action='store_true')
         args = parser.parse_args(argv)
 
         archives = process_archives(archive_path)
 
-        compressed_archives, regular_archives = separate_archives_based_on_compression(rom_path, archives)
+        compressed_archives, regular_archives = cache_separate_archives_based_on_compression(archive_path, rom_path, archives)
 
-        error_count = 0
-        correct_count = 0
+        error_count_reg = 0
+        error_count_comp = 0
+        correct_count_reg = 0
+        correct_count_comp = 0
         with open(rom_path, 'rb') as rom_file:
-            for archive_ptr, archive_size in compressed_archives:
-                    print('@archive {0} (size: {1})'.format('0x%X' % archive_ptr, archive_size))
-                    try:
-                        textscript_archive = dumper.TextScriptArchive.read_script(dumper.CommandContext(), archive_ptr, rom_file)
-                        correct_count += 1
-                        print(textscript_archive.build())
-                    except Exception:
-                        error_count += 1
+            if args.noncompressed:
+                for archive_ptr, archive_size in regular_archives:
+                        i = error_count_reg + correct_count_reg
+                        print('reg[{i}]: @archive 0x{archive_ptr:X} (size: {archive_size})'.format(**vars()))
+                        try:
+                            textscript_archive = dumper.TextScriptArchive.read_script(dumper.CommandContext(), archive_ptr, rom_file)
+                            correct_count_reg += 1
+                            # print(textscript_archive.build())
+                        except Exception:
+                            error_count_reg += 1
+                            if args.error: raise
 
-        print('error_count: %d (%d%%)' % (error_count, 1.0 * error_count / (correct_count + error_count)))
-        print('correct_count: %d' % (correct_count))
+                print('error_count_uncompressed: %d' % (error_count_reg))
+                print('correct_count_uncompressed: %d' % (correct_count_reg))
 
+            if args.compressed:
+                 for archive_ptr, archive_size in compressed_archives:
+                    decompress_path = 'TextScript%07X.lz.bin' % (archive_ptr)
+                    gbagfx_decompress_at(rom_file, archive_ptr, decompress_path)
+                    size = os.path.getsize(decompress_path) - 4 # must not account for the compression header!
+                    with open(decompress_path, 'rb') as decompressed_file:
+                        i = error_count_comp + correct_count_comp
+                        print('comp[{i}]: @archive 0x{archive_ptr:X} (size: {archive_size})'.format(**vars()))
+                        try:
+                            textscript_archive = dumper.TextScriptArchive.read_script(dumper.CommandContext(), 4, decompressed_file, size)
+                            correct_count_comp += 1
+                        except Exception:
+                            error_count_comp += 1
+                            if args.error: raise
+
+                    os.remove(decompress_path)
+                 print('error_count_compressed: %d' % (error_count_comp))
+                 print('correct_count_compressed: %d' % (correct_count_comp))
+
+        print('compressed to noncompressed scanned')
         print(len(compressed_archives), len(regular_archives))
 
 
+
+def cache_to_disk(func, cache_path, *args, **kwargs):
+    """
+    caches the result of :func: to a file so that it doesn't have to be computed more than once
+    :param func: function with expensive computation
+    :param cache_path: file to cache to`
+    :param args: args to :func:
+    :param kwargs: kwargs to :func:
+    :return: results of func as cached in :path_name:
+    """
+    import json
+    if os.path.exists(cache_path):
+        # return deserialized output
+        with open(cache_path, 'r') as f:
+            return json.load(f)
+    else:
+        # compute and serialize to cache
+        res = func(*args, **kwargs)
+        with open(cache_path, 'w') as f:
+            json.dump(res, f)
+        return res
 
 
 def separate_archives_based_on_compression(rom_path, archives):
@@ -95,6 +146,13 @@ def separate_archives_based_on_compression(rom_path, archives):
                 regular_archives.append((archive_ptr, archive_size))
 
     return compressed_archives, regular_archives
+
+
+def cache_separate_archives_based_on_compression(archive_path, rom_path, archives):
+    # find the compressed and non-compressed archives and cache the result to disk
+    cache_path = os.path.join(definitions.CACHE_DIR, separate_archives_based_on_compression.__name__ + '.' + os.path.basename(archive_path) + '.cache')
+    return cache_to_disk(separate_archives_based_on_compression, cache_path,
+                                                          rom_path, archives)
 
 
 def process_archives(archive_path) -> List[int]:
@@ -211,8 +269,8 @@ def gbagfx_decompress_at(rom_file, compressed_data_address: int, output_path: st
         slice_file.write(rom_file.read())
 
     # decompress file
-    gbagfx_bin = '/home/lan/dev/dis/bn6f/tools/gbagfx/gbagfx'
-    status = os.system('{gbagfx_bin} {slice_file_path} {output_path}'.format(**vars()))
+    gbagfx_bin = os.path.join(definitions.ROM_REPO_DIR, 'tools', 'gbagfx', 'gbagfx')
+    status = os.system('{gbagfx_bin} {slice_file_path} {output_path} 2> /dev/null'.format(**vars()))
 
     os.remove(slice_file_path)
     return status
@@ -220,7 +278,8 @@ def gbagfx_decompress_at(rom_file, compressed_data_address: int, output_path: st
 def gbagfx_compress(input_path: str, output_lz_path: str):
     if not output_lz_path.endswith('.lz'):
         raise ValueError('lz_path must end with .lz as that is expected by gbagfx')
-    gbagfx_bin = '/home/lan/dev/dis/bn6f/tools/gbagfx/gbagfx'
+
+    gbagfx_bin = os.path.join(definitions.ROM_REPO_DIR, 'tools', 'gbagfx', 'gbagfx')
     return os.system('{gbagfx_bin} {input_path} {output_lz_path} '.format(**vars()))
 
 

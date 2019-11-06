@@ -1,6 +1,8 @@
 import unittest
+import os
 import io
 from text_script_dumper import *
+import definitions
 
 class RegressionTests(unittest.TestCase):
     def setUp(self):
@@ -283,6 +285,26 @@ class CommandParsingTests(unittest.TestCase):
                                  'select', prioritize_s=False, nop=1)
         self.runTestData(bytes, cmds)
 
+
+class ArchiveListTests(unittest.TestCase):
+
+    # @unittest.skip('skipped till passing in development')
+    def test_no_crash_on_noncompressed_textscripts(self):
+        # asserts no crashes amongst all noncompressed archives in bn6f
+        import text_script_scanner
+        rom_path = os.path.join(definitions.ROM_REPO_DIR, 'bn6f.gba')
+        archive_path = os.environ['HOME'] + '/dev/dis/downloads/MMBNTextDumps/tpl/mmbn6cf-us.tpl' # FIXME: Hard path
+        text_script_scanner.Commands.dump_archives(rom_path, archive_path, ['--noncompressed', '--error'])
+
+    # @unittest.skip('skipped till passing in development')
+    def test_no_crash_on_compressed_textscripts(self):
+        # asserts no crashes amongst all noncompressed archives in bn6f
+        import text_script_scanner
+        rom_path = os.path.join(definitions.ROM_REPO_DIR, 'bn6f.gba')
+        archive_path = os.environ[
+                           'HOME'] + '/dev/dis/downloads/MMBNTextDumps/tpl/mmbn6cf-us.tpl'  # FIXME: Hard path
+
+        text_script_scanner.Commands.dump_archives(rom_path, archive_path, ['--compressed', '--error'])
 
 if __name__ == '__main__':
     unittest.main()

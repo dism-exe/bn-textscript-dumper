@@ -1,36 +1,36 @@
 	text_archive_start
 
-	def_text_script scr_0
+	def_text_script TextScript0_unk0
 	ts_mugshot_show 0x4D
 	ts_msg_open
 	.string "Whaaaaaaaaaa!!"
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_1
+	def_text_script TextScript0_unk1
 
-	def_text_script scr_2
+	def_text_script TextScript0_unk2
 
-	def_text_script scr_3
+	def_text_script TextScript0_unk3
 
-	def_text_script scr_4
+	def_text_script TextScript0_unk4
 
-	def_text_script scr_5
+	def_text_script TextScript0_unk5
 	ts_mugshot_show 0x4D
 	ts_msg_open
 	.string "Hey,hang tough,Lan!!"
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_6
+	def_text_script TextScript0_unk6
 
-	def_text_script scr_7
+	def_text_script TextScript0_unk7
 
-	def_text_script scr_8
+	def_text_script TextScript0_unk8
 
-	def_text_script scr_9
+	def_text_script TextScript0_unk9
 
-	def_text_script scr_10
+	def_text_script TextScript0_unk10
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	ts_text_speed 0x1
@@ -58,15 +58,15 @@
 	ts_wait_o_w_var 0x2, 0x81
 	ts_end
 
-	def_text_script scr_11
+	def_text_script TextScript0_unk11
 
-	def_text_script scr_12
+	def_text_script TextScript0_unk12
 
-	def_text_script scr_13
+	def_text_script TextScript0_unk13
 
-	def_text_script scr_14
+	def_text_script TextScript0_unk14
 
-	def_text_script scr_15
+	def_text_script TextScript0_unk15
 	ts_mugshot_show 0x0
 	ts_msg_open
 	.string "Mr.Prog's in the\n"
@@ -75,15 +75,15 @@
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_16
+	def_text_script TextScript0_unk16
 
-	def_text_script scr_17
+	def_text_script TextScript0_unk17
 
-	def_text_script scr_18
+	def_text_script TextScript0_unk18
 
-	def_text_script scr_19
+	def_text_script TextScript0_unk19
 
-	def_text_script scr_20
+	def_text_script TextScript0_unk20
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "HUH? I'M IN THE WAY?\n"
@@ -93,7 +93,7 @@
 	ts_flag_set 0x98, 0xD
 	ts_end
 
-	def_text_script scr_21
+	def_text_script TextScript0_unk21
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "IN THE WAY?\n"
@@ -102,7 +102,7 @@
 	ts_flag_set 0x99, 0xD
 	ts_end
 
-	def_text_script scr_22
+	def_text_script TextScript0_unk22
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "I'M WHAT!? SPEAK UP!\n"
@@ -112,7 +112,7 @@
 	ts_flag_set 0x9A, 0xD
 	ts_end
 
-	def_text_script scr_23
+	def_text_script TextScript0_unk23
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "AM I BLOCKING YOU?\n"
@@ -121,7 +121,7 @@
 	ts_flag_set 0x9B, 0xD
 	ts_end
 
-	def_text_script scr_24
+	def_text_script TextScript0_unk24
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "I'M A BLOCK\n"
@@ -131,7 +131,7 @@
 	ts_flag_set 0x9C, 0xD
 	ts_end
 
-	def_text_script scr_25
+	def_text_script TextScript0_unk25
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "DON'T YOU HATE IT\n"
@@ -141,7 +141,7 @@
 	ts_flag_set 0x9D, 0xD
 	ts_end
 
-	def_text_script scr_26
+	def_text_script TextScript0_unk26
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "YOU WANT ME TO MOVE?\n"
@@ -151,7 +151,7 @@
 	ts_flag_set 0x9E, 0xD
 	ts_end
 
-	def_text_script scr_27
+	def_text_script TextScript0_unk27
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "OH,I'M TERRIBLY\n"
@@ -161,7 +161,7 @@
 	ts_flag_set 0x9F, 0xD
 	ts_end
 
-	def_text_script scr_28
+	def_text_script TextScript0_unk28
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "DO YOU NEED TO GET\n"
@@ -171,7 +171,7 @@
 	ts_flag_set 0xA0, 0xD
 	ts_end
 
-	def_text_script scr_29
+	def_text_script TextScript0_unk29
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "AH,I WAS ONLY TRYING\n"
@@ -181,7 +181,7 @@
 	ts_flag_set 0xA1, 0xD
 	ts_end
 
-	def_text_script scr_30
+	def_text_script TextScript0_unk30
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "WOW,A PRO! I WANT TO\n"
@@ -191,7 +191,7 @@
 	ts_flag_set 0xA2, 0xD
 	ts_end
 
-	def_text_script scr_31
+	def_text_script TextScript0_unk31
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "I'M BLOCKING YOU?\n"
@@ -201,7 +201,7 @@
 	ts_flag_set 0xA3, 0xD
 	ts_end
 
-	def_text_script scr_32
+	def_text_script TextScript0_unk32
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "I DON'T KNOW HOW TO\n"
@@ -211,7 +211,7 @@
 	ts_flag_set 0xA4, 0xD
 	ts_end
 
-	def_text_script scr_33
+	def_text_script TextScript0_unk33
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "THANK YOU FOR\n"
@@ -221,7 +221,7 @@
 	ts_flag_set 0xA5, 0xD
 	ts_end
 
-	def_text_script scr_34
+	def_text_script TextScript0_unk34
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "DO YOU THINK I'M\n"
@@ -231,7 +231,7 @@
 	ts_flag_set 0xA6, 0xD
 	ts_end
 
-	def_text_script scr_35
+	def_text_script TextScript0_unk35
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "THOU REQUIRES THAT\n"
@@ -241,7 +241,7 @@
 	ts_flag_set 0xA7, 0xD
 	ts_end
 
-	def_text_script scr_36
+	def_text_script TextScript0_unk36
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "WHAT'S SO IMPORTANT\n"
@@ -251,7 +251,7 @@
 	ts_flag_set 0xA8, 0xD
 	ts_end
 
-	def_text_script scr_37
+	def_text_script TextScript0_unk37
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "YOU LOOKIN' AT ME?\n"
@@ -261,7 +261,7 @@
 	ts_flag_set 0xA9, 0xD
 	ts_end
 
-	def_text_script scr_38
+	def_text_script TextScript0_unk38
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "OH,JULIET,JULIET...\n"
@@ -271,7 +271,7 @@
 	ts_flag_set 0xAA, 0xD
 	ts_end
 
-	def_text_script scr_39
+	def_text_script TextScript0_unk39
 	ts_mugshot_show 0x3C
 	ts_msg_open
 	.string "TO BLOCK,OR NOT TO\n"

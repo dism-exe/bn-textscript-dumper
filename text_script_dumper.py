@@ -194,7 +194,10 @@ class TextScript:
                 return bin_file.tell() < addr + size
 
         def is_valid_game_string_char(byte) -> bool:
-            return byte is not b'' and (ord(byte) < 0xE5 or ord(byte) == 0xE6 or ord(byte) == 0xE9)
+            try:
+                return byte != b'' and (ord(byte) < 0xE5 or ord(byte) == 0xE6 or ord(byte) == 0xE9)
+            except TypeError:
+                raise
 
         # process TextScript units (commands or strings)
         byte = bin_file.read(1)
@@ -222,15 +225,14 @@ class TextScript:
 
                 return out, byte
 
-            # TODO check: is this a valid check?
+            # reached end of file, cannot process any more
             if byte == b'':
-                error(TextScriptException, 'error: reached end of file before script end', critical=True)
                 break
 
             if is_valid_game_string_char(byte):
                 # read strings, which may be multiple line-separated units
                 strings, byte = read_string_lines(bin_file, byte, size)
-                if strings is not []:
+                if strings != []:
                     units.extend(strings)
                     # make sure we didn't encounter an end_script command, otherwise our unit processing is over
                     if byte == b'\xE6':
@@ -247,13 +249,16 @@ class TextScript:
             # do while the script has not ended
             if not in_script(bin_file, byte, size):
                 break
+
             byte = bin_file.read(1)
 
-        # compute size if it was not provided
-        if size is None:
-            size = bin_file.tell() - addr
+        # compute script size. ensure it matches with expected size if given
+        computed_size = bin_file.tell() - addr
+        if size is not None and size != computed_size:
+            raise TextScriptException('computed script size {computed_size} does not match expected size of {size}'.format(**vars()))
 
-        return TextScript(command_context, units, archive_idx, addr, size)
+        # FIXME: don't pass addr, it's not actually relative to the archive address, it's based purely on the location in bin_file
+        return TextScript(command_context, units, archive_idx, addr, computed_size)
 
     def build(self) -> str:
         """
@@ -411,7 +416,8 @@ class TextScriptArchive:
 
             if archive_size:
                 if script_size is None:
-                    script_size = archive_size
+                    script_size = archive_size - ptr
+                # TODO check: should we truncate based on script_size > archive_size or flag this as an invalid state?
                 script_size = min(script_size, archive_size)
 
             # make sure when reading each script that we reached its location

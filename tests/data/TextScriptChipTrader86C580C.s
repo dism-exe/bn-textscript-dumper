@@ -1,6 +1,6 @@
 	text_archive_start
 
-	def_text_script scr_0
+	def_text_script TextScript0_unk0
 	ts_msg_open
 	.string "It's a Chip Trader.\n"
 	.string "Insert 3 BtlChips?\n"
@@ -16,7 +16,7 @@
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_1
+	def_text_script TextScript0_unk1
 	ts_check_flag 0x1D, 0x17, 0xFF, 0x14
 	ts_check_navi_all 0xFF, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0x14, 0xFF
 	ts_msg_open
@@ -27,7 +27,7 @@
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_2
+	def_text_script TextScript0_unk2
 	ts_check_flag 0x1D, 0x17, 0xFF, 0x1E
 	ts_check_navi_all 0xFF, 0x1E, 0x1E, 0x1E, 0x1E, 0x1E, 0x1E, 0x1E, 0x1E, 0x1E, 0x1E, 0xFF
 	ts_msg_open
@@ -44,7 +44,7 @@
 	ts_select 0x6, 0x0, 0xFF, 0xFF, 0xFF
 	ts_end
 
-	def_text_script scr_3
+	def_text_script TextScript0_unk3
 	ts_msg_open
 	.string "OK!\n"
 	ts_sound_disable_text_sfx
@@ -84,7 +84,7 @@
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_4
+	def_text_script TextScript0_unk4
 	ts_check_flag 0x1D, 0x17, 0xFF, 0x15
 	ts_check_navi_all 0xFF, 0x15, 0x15, 0x15, 0x15, 0x15, 0x15, 0x15, 0x15, 0x15, 0x15, 0xFF
 	ts_clear_msg
@@ -96,10 +96,10 @@
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_5
+	def_text_script TextScript0_unk5
 	ts_end
 
-	def_text_script scr_6
+	def_text_script TextScript0_unk6
 	ts_msg_open
 	.string "Chip Trader Special!\n"
 	.string "Insert 10 BtlChips?\n"
@@ -115,7 +115,7 @@
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_7
+	def_text_script TextScript0_unk7
 	ts_check_flag 0x1D, 0x17, 0xFF, 0x16
 	ts_check_navi_all 0xFF, 0x16, 0x16, 0x16, 0x16, 0x16, 0x16, 0x16, 0x16, 0x16, 0x16, 0xFF
 	ts_mugshot_show 0x37
@@ -126,7 +126,7 @@
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_8
+	def_text_script TextScript0_unk8
 	ts_check_flag 0x1D, 0x17, 0xFF, 0x1F
 	ts_check_navi_all 0xFF, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0x1F, 0xFF
 	ts_msg_open
@@ -144,7 +144,7 @@
 	ts_msg_close_quick
 	ts_end
 
-	def_text_script scr_9
+	def_text_script TextScript0_unk9
 	ts_msg_open
 	.string "OK!\n"
 	ts_sound_disable_text_sfx
@@ -184,7 +184,7 @@
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_10
+	def_text_script TextScript0_unk10
 	ts_check_flag 0x1D, 0x17, 0xFF, 0x17
 	ts_check_navi_all 0xFF, 0x17, 0x17, 0x17, 0x17, 0x17, 0x17, 0x17, 0x17, 0x17, 0x17, 0xFF
 	ts_clear_msg
@@ -196,10 +196,10 @@
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_11
+	def_text_script TextScript0_unk11
 	ts_end
 
-	def_text_script scr_12
+	def_text_script TextScript0_unk12
 	ts_msg_open
 	.string "A BugFrag Trader."
 	ts_key_wait 0x0
@@ -216,7 +216,7 @@
 	ts_start_chip_trader 0x1, 0xD
 	ts_wait_hold 0x0, 0x0
 
-	def_text_script scr_13
+	def_text_script TextScript0_unk13
 	ts_check_flag 0x1D, 0x17, 0xFF, 0x18
 	ts_check_navi_all 0xFF, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0xFF
 	ts_mugshot_show 0x37
@@ -226,9 +226,9 @@
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_14
+	def_text_script TextScript0_unk14
 
-	def_text_script scr_15
+	def_text_script TextScript0_unk15
 	ts_msg_open_quick
 	ts_print_current_navi_ow
 	.string " handed over\n"
@@ -273,7 +273,7 @@
 	ts_start_chip_trader 0x1, 0x10
 	ts_wait_hold 0x0, 0x0
 
-	def_text_script scr_16
+	def_text_script TextScript0_unk16
 	ts_check_flag 0x1D, 0x17, 0xFF, 0x19
 	ts_check_navi_all 0xFF, 0x19, 0x19, 0x19, 0x19, 0x19, 0x19, 0x19, 0x19, 0x19, 0x19, 0xFF
 	ts_clear_msg
@@ -286,22 +286,22 @@
 	ts_msg_close
 	ts_wait_hold 0x0, 0x0
 
-	def_text_script scr_17
+	def_text_script TextScript0_unk17
 	ts_msg_close
 	ts_wait_hold 0x0, 0x0
 
-	def_text_script scr_18
+	def_text_script TextScript0_unk18
 
-	def_text_script scr_19
+	def_text_script TextScript0_unk19
 
-	def_text_script scr_20
+	def_text_script TextScript0_unk20
 	ts_msg_open
 	.string "You don't have 3\n"
 	.string "chips in your Pack."
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_21
+	def_text_script TextScript0_unk21
 	ts_clear_msg
 	ts_msg_open
 	.string "You don't have 3\n"
@@ -309,14 +309,14 @@
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_22
+	def_text_script TextScript0_unk22
 	ts_msg_open
 	.string "You don't have 10\n"
 	.string "chips in your Pack."
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_23
+	def_text_script TextScript0_unk23
 	ts_clear_msg
 	ts_msg_open
 	.string "You don't have 10\n"
@@ -324,14 +324,14 @@
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_24
+	def_text_script TextScript0_unk24
 	ts_msg_open
 	.string "We don't have 10\n"
 	.string "BugFrags!"
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_25
+	def_text_script TextScript0_unk25
 	ts_clear_msg
 	ts_msg_open
 	.string "We don't have 10\n"
@@ -339,28 +339,28 @@
 	ts_key_wait 0x0
 	ts_wait_hold 0x0, 0x0
 
-	def_text_script scr_26
+	def_text_script TextScript0_unk26
 	ts_msg_open
 	.string "You don't have 3\n"
 	.string "chips in your Pack."
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_27
+	def_text_script TextScript0_unk27
 	ts_msg_open
 	.string "You don't have 3\n"
 	.string "chips in your Pack."
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_28
+	def_text_script TextScript0_unk28
 	ts_msg_open
 	.string "We don't have 10\n"
 	.string "BugFrags!"
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_29
+	def_text_script TextScript0_unk29
 	ts_clear_msg
 	ts_msg_open
 	.string "We don't have 10\n"
@@ -368,7 +368,7 @@
 	ts_key_wait 0x0
 	ts_wait_hold 0x0, 0x0
 
-	def_text_script scr_30
+	def_text_script TextScript0_unk30
 	ts_msg_open
 	ts_text_speed 0x0
 	.string "Add these 3?\n"
@@ -383,7 +383,7 @@
 	ts_msg_close_quick
 	ts_end
 
-	def_text_script scr_31
+	def_text_script TextScript0_unk31
 	ts_msg_open
 	ts_text_speed 0x0
 	.string "Add these 10?\n"
@@ -398,7 +398,7 @@
 	ts_msg_close_quick
 	ts_end
 
-	def_text_script scr_32
+	def_text_script TextScript0_unk32
 	ts_msg_open
 	ts_text_speed 0x0
 	.string "Add these 3?\n"
@@ -413,7 +413,7 @@
 	ts_msg_close_quick
 	ts_end
 
-	def_text_script scr_33
+	def_text_script TextScript0_unk33
 	ts_msg_open
 	ts_text_speed 0x0
 	.string "Add these 3?\n"
@@ -428,7 +428,7 @@
 	ts_msg_close_quick
 	ts_end
 
-	def_text_script scr_34
+	def_text_script TextScript0_unk34
 	ts_clear_msg
 	ts_msg_open
 	.string "Too bad,Lan. You\n"
@@ -437,7 +437,7 @@
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_35
+	def_text_script TextScript0_unk35
 	ts_clear_msg
 	ts_msg_open
 	.string "Too bad,Lan. You\n"
@@ -446,7 +446,7 @@
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_36
+	def_text_script TextScript0_unk36
 	ts_msg_open
 	ts_text_speed 0x0
 	.string "Add these 10?\n"
@@ -461,7 +461,7 @@
 	ts_msg_close_quick
 	ts_end
 
-	def_text_script scr_37
+	def_text_script TextScript0_unk37
 	ts_msg_open
 	ts_text_speed 0x0
 	.string "Add these 10?\n"
@@ -476,7 +476,7 @@
 	ts_msg_close_quick
 	ts_end
 
-	def_text_script scr_38
+	def_text_script TextScript0_unk38
 	ts_clear_msg
 	ts_msg_open
 	.string "Too bad,Lan. You\n"
@@ -485,7 +485,7 @@
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_39
+	def_text_script TextScript0_unk39
 	ts_clear_msg
 	ts_msg_open
 	.string "Too bad,Lan. You\n"
@@ -494,21 +494,21 @@
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_40
+	def_text_script TextScript0_unk40
 	ts_msg_open
 	.string "We don't have 10\n"
 	.string "BugFrags!"
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_41
+	def_text_script TextScript0_unk41
 	ts_msg_open
 	.string "We don't have 10\n"
 	.string "BugFrags!"
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_42
+	def_text_script TextScript0_unk42
 	ts_clear_msg
 	ts_msg_open
 	.string "We don't have 10\n"
@@ -516,7 +516,7 @@
 	ts_key_wait 0x0
 	ts_wait_hold 0x0, 0x0
 
-	def_text_script scr_43
+	def_text_script TextScript0_unk43
 	ts_clear_msg
 	ts_msg_open
 	.string "We don't have 10\n"
@@ -524,29 +524,29 @@
 	ts_key_wait 0x0
 	ts_wait_hold 0x0, 0x0
 
-	def_text_script scr_44
+	def_text_script TextScript0_unk44
 	ts_msg_open
 	.string "You don't have 10\n"
 	.string "chips in your Pack."
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_45
+	def_text_script TextScript0_unk45
 	ts_msg_open
 	.string "You don't have 10\n"
 	.string "chips in your Pack."
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_46
+	def_text_script TextScript0_unk46
 
-	def_text_script scr_47
+	def_text_script TextScript0_unk47
 
-	def_text_script scr_48
+	def_text_script TextScript0_unk48
 
-	def_text_script scr_49
+	def_text_script TextScript0_unk49
 
-	def_text_script scr_50
+	def_text_script TextScript0_unk50
 	ts_mugshot_show 0x35
 	ts_msg_open
 	.string "I am Otenko."
@@ -571,7 +571,7 @@
 	.string " No"
 	ts_select 0x6, 0x0, 0xFF, 0x34, 0xFF
 
-	def_text_script scr_51
+	def_text_script TextScript0_unk51
 	ts_call_disable_mugshot_brighten
 	ts_mugshot_show 0x35
 	ts_msg_open_quick
@@ -589,7 +589,7 @@
 	ts_menu_select_crossover_trader
 	ts_wait_hold 0x0, 0x0
 
-	def_text_script scr_52
+	def_text_script TextScript0_unk52
 	ts_call_disable_mugshot_brighten
 	ts_mugshot_show 0x35
 	ts_msg_open_quick
@@ -602,7 +602,7 @@
 	ts_key_wait 0x0
 	ts_wait_hold 0x0, 0x0
 
-	def_text_script scr_53
+	def_text_script TextScript0_unk53
 	ts_call_disable_mugshot_brighten
 	ts_mugshot_show 0x35
 	ts_msg_open_quick
@@ -618,7 +618,7 @@
 	ts_select 0x6, 0x0, 0xFF, 0x34, 0xFF
 	ts_wait_hold 0x0, 0x0
 
-	def_text_script scr_54
+	def_text_script TextScript0_unk54
 	ts_call_disable_mugshot_brighten
 	ts_mugshot_show 0x35
 	ts_msg_open_quick
@@ -627,7 +627,7 @@
 	ts_key_wait 0x0
 	ts_end
 
-	def_text_script scr_55
+	def_text_script TextScript0_unk55
 	ts_msg_open_quick
 	ts_flag_set 0xF6, 0x0
 	ts_control_lock
@@ -664,7 +664,7 @@
 	ts_select 0x6, 0x0, 0xFF, 0x34, 0xFF
 	ts_wait_hold 0x0, 0x0
 
-	def_text_script scr_56
+	def_text_script TextScript0_unk56
 	ts_msg_open_quick
 	ts_control_lock
 	ts_wait 0x3C, 0x0
@@ -695,7 +695,7 @@
 	ts_select 0x6, 0x0, 0xFF, 0x34, 0xFF
 	ts_wait_hold 0x0, 0x0
 
-	def_text_script scr_57
+	def_text_script TextScript0_unk57
 	ts_msg_open_quick
 	ts_control_lock
 	ts_wait 0x3C, 0x0
@@ -723,7 +723,7 @@
 	ts_select 0x6, 0x0, 0xFF, 0x34, 0xFF
 	ts_wait_hold 0x0, 0x0
 
-	def_text_script scr_58
+	def_text_script TextScript0_unk58
 	ts_msg_open_quick
 	ts_flag_set 0xF6, 0x0
 	ts_control_lock
@@ -759,7 +759,7 @@
 	ts_select 0x6, 0x0, 0xFF, 0x34, 0xFF
 	ts_wait_hold 0x0, 0x0
 
-	def_text_script scr_59
+	def_text_script TextScript0_unk59
 	ts_msg_open_quick
 	ts_control_lock
 	ts_wait 0x3C, 0x0
@@ -788,7 +788,7 @@
 	ts_select 0x6, 0x0, 0xFF, 0x34, 0xFF
 	ts_wait_hold 0x0, 0x0
 
-	def_text_script scr_60
+	def_text_script TextScript0_unk60
 	ts_msg_open_quick
 	ts_control_lock
 	ts_wait 0x3C, 0x0
@@ -815,7 +815,7 @@
 	ts_select 0x6, 0x0, 0xFF, 0x34, 0xFF
 	ts_wait_hold 0x0, 0x0
 
-	def_text_script scr_61
+	def_text_script TextScript0_unk61
 	ts_msg_open_quick
 	ts_flag_set 0xF6, 0x0
 	ts_control_lock
@@ -851,7 +851,7 @@
 	ts_select 0x6, 0x0, 0xFF, 0x34, 0xFF
 	ts_wait_hold 0x0, 0x0
 
-	def_text_script scr_62
+	def_text_script TextScript0_unk62
 	ts_msg_open_quick
 	ts_control_lock
 	ts_wait 0x3C, 0x0
@@ -880,7 +880,7 @@
 	ts_select 0x6, 0x0, 0xFF, 0x34, 0xFF
 	ts_wait_hold 0x0, 0x0
 
-	def_text_script scr_63
+	def_text_script TextScript0_unk63
 	ts_msg_open_quick
 	ts_control_lock
 	ts_wait 0x3C, 0x0
@@ -907,7 +907,7 @@
 	ts_select 0x6, 0x0, 0xFF, 0x34, 0xFF
 	ts_wait_hold 0x0, 0x0
 
-	def_text_script scr_64
+	def_text_script TextScript0_unk64
 	.string " "
 	ts_clear_msg
 	.string " ボ$"
