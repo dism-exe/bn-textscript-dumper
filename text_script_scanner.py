@@ -5,6 +5,10 @@ import argparse
 import text_script_dumper as dumper
 import definitions
 
+sys.path.append(os.path.join(definitions.ROM_REPO_DIR, 'tools'))
+import edit_source.source_read as source_read
+
+class TextScriptScannerException(Exception): pass
 
 def error(m):
     print('error: {m}'.format(**vars()))
@@ -51,6 +55,219 @@ class Commands:
         print(len(compressed_archives), len(regular_archives))
 
     @staticmethod
+    def dump_compressed_textscripts(rom_path, archive_path, argv,  get_desc=False):
+        desc = 'dumps all *.s.lz scripts to *.s'
+        if get_desc:
+            return desc
+
+        parser = argparse.ArgumentParser(description=desc)
+        parser.prog = parser.prog + ' ' + Commands.get_compressed_archives.__name__
+        args = parser.parse_args(argv)
+
+        archives = process_archives(archive_path)
+
+        # find the compressed and non-compressed archives and cache the result to disk
+        compressed_archives, regular_archives = cache_separate_archives_based_on_compression(archive_path, rom_path, archives)
+
+        compressed_archives_path = os.path.join(definitions.ROM_REPO_DIR, 'data', 'textscript', 'compressed')
+        error_messages = []
+        for filename in os.listdir(compressed_archives_path):
+            if filename.endswith('.s.lz'):
+                # print('\t' + os.path.join('data', 'textscript', 'compressed', filename[:filename.rindex('.')]) + ' \\')
+                # if 'text_credits' not in filename:
+                #     continue
+                path = os.path.join(compressed_archives_path, filename)
+                # decompress into a *.s.bin
+                s_path = path[:path.rindex('.')]
+                bin_path = s_path + '.bin'
+                gbagfx_decompress(path, bin_path)
+
+                # dump into a *.s
+                bin_size = os.path.getsize(bin_path)
+                with open(bin_path, 'rb') as bin_file:
+                    textscript_archive = dumper.TextScriptArchive.read_script(dumper.CommandContext(), 4,
+                                                                              bin_file, bin_size - 4)
+
+                    # modify content for integration
+                    content = '\t.include "charmap.inc"\n'
+                    content += '\t.include "include/macros/enum.inc"\n'
+                    content += '\t.include "include/bytecode/text_script.inc"\n'
+                    label =  filename[:filename.rindex('.')]
+                    label = label[:label.rindex('.')]
+                    content += '\n\t.data\n\n'
+                    content += '{label}::\n'.format(**vars())
+
+                    # make sure it actually compiles to *.s.bin
+                    bin_file.seek(4)
+                    if textscript_archive.serialize() != bin_file.read():
+                        error_msg = 'error: text archive {label} does not compile to the same binary'.format(**vars())
+                        print(error_msg)
+                        error_messages.append(error_msg)
+                        continue
+                        # raise Exception('text archive {label} does not compile to the same binary'.format(**vars()))
+
+                    # write the compression header of 4 bytes
+                    def bytes_to_int(bytes):
+                        out = 0
+                        for i, b in enumerate(bytes):
+                            out += b << 8*i
+                        return out
+
+                    with open(bin_path, 'rb') as lz_file:
+                        compression_header = bytes_to_int(lz_file.read(4))
+                        content += '\t.word 0x{0:X}\n\n'.format(compression_header)
+
+                    # include dump, but without the byte alignment
+                    build = textscript_archive.build()
+                    build = build[:build.rindex('.balign')]
+
+                    # replace the dummy TextScript0 with the actual name of the file
+                    while 'TextScript0_' in build:
+                        build = build.replace('TextScript0_', label + '_')
+
+                    content += build
+
+                    # write *.s
+                    print ('writing {s_path}'.format(**vars()))
+                    with open(s_path, 'w') as output_file:
+                        output_file.write(content)
+
+
+        if len(error_messages) != 0:
+            print('encountered the following errors while dumping text archives:')
+            for error_msg in error_messages: print('  ' + error_msg)
+        print(len(compressed_archives), len(regular_archives))
+
+    @staticmethod
+    def incbin_compressed_archives(rom_path, archive_path, argv,  get_desc=False):
+        desc = 'reads the repository and incbins .s.lz files for every compressed archive'
+        if get_desc:
+            return desc
+
+        parser = argparse.ArgumentParser(description=desc)
+        parser.prog = parser.prog + ' ' + Commands.incbin_compressed_archives.__name__
+        parser.add_argument('--recache', action='store_true', help='deleted cached files related to this command')
+        args = parser.parse_args(argv)
+
+        archives = process_archives(archive_path)
+
+        # find the compressed and non-compressed archives and cache the result to disk
+        compressed_archives, regular_archives = cache_separate_archives_based_on_compression(archive_path, rom_path, archives)
+
+        def convert_unit_class_to_dict():
+            units = source_read.main(info=False)
+            for unit in units:
+                def convert_unit(unit):
+                    for key in unit.keys():
+                        if type(unit[key]) is source_read.AsmFile.Unit:
+                            unit[key] = unit[key].__dict__
+                        elif type(unit[key]) is dict:
+                            convert_unit(unit[key])
+                        elif key == 'pool':
+                            for i, pool in enumerate(unit['pool']):
+                                if type(pool) is dict:
+                                    convert_unit(pool)
+
+                convert_unit(unit)
+            return units
+
+        root_dir = definitions.ROOT_DIR
+        cache_path = '{root_dir}/.cache/repo_units.cache'.format(**vars())
+        if args.recache:
+            os.remove(cache_path)
+        source_units = cache_to_file(convert_unit_class_to_dict, cache_path)
+        print('source_units', len(source_units))
+
+        def find_archive(archives, ptr):
+            if not ptr:
+                return None
+            ptr &= ~0x8000000
+            for archive_ptr, size in archives:
+                if ptr == archive_ptr:
+                    return archive_ptr, size
+            return None
+
+        count_found = 0
+        size = 0
+        clean_data_units = []
+        data_units_to_process = []
+        for source_unit in filter(lambda u: 'ea' in u, source_units):
+            archive = find_archive(compressed_archives, source_unit['ea'])
+            if archive is not None and '.incbin' not in source_unit['unit']['content']:
+                archive_ptr, archive_size = archive
+                data_unit = DataUnit(source_unit)
+
+                if data_unit.size - 4 == archive_size:
+                    clean_data_units.append(data_unit)
+                else:
+                    data_units_to_process.append(data_unit)
+                    print('SIZE ERROR', data_unit.size, archive_size)
+
+
+                count_found += 1
+
+        # replace clean archives with an .incbin
+        update_label_count = 0
+        for data_unit_idx, data_unit in enumerate(clean_data_units):
+            # remove line number from path and set as absolute path
+            path = data_unit.source_unit['path']
+            path = path[:path.index(':')]
+            path = os.path.join(definitions.ROM_REPO_DIR, path)
+
+
+            # determine the name of the compressed file. Update the label if it's a generic data label
+            label = data_unit.source_unit['name']
+            lz_name = label.replace('dword_', 'CompText')
+            lz_name = lz_name.replace('byte_', 'CompText')
+            lz_name = lz_name.replace('comp_', 'CompText')
+            if lz_name.startswith('off_'):
+                lz_name = lz_name.replace('off_', 'EmptyCompText')
+            if label != lz_name:
+                # update the label in the repository
+                replacep_bin = os.path.join(definitions.ROM_REPO_DIR, 'replacep.sh')
+                print('UPDATE: {0} -> {1}'.format(label, lz_name))
+                cwd = os.getcwd()
+                os.chdir(definitions.ROM_REPO_DIR)
+                os.system('{replacep_bin} {label} {lz_name}'.format(**vars()))
+                os.chdir(cwd)
+                update_label_count += 1
+            lz_path = os.path.join('data', 'textscript', 'compressed', lz_name + '.s.lz')
+            abs_lz_path = os.path.join(definitions.ROM_REPO_DIR, lz_path)
+            print('LZ_PATH', lz_path)
+
+            # generate the compressed file
+            rom_path = os.path.join(definitions.ROM_REPO_DIR, definitions.ROM_NAME) + '.gba'
+            write_subfile(rom_path, abs_lz_path, data_unit.address, data_unit.size - 4)
+
+            # edit the source, replace content with an incbin
+            content = []
+            for i, line in enumerate(data_unit.content.split('\n')):
+                if '.byte' in line or '.word' in line or '.hword' in line:
+                    if i == 0:
+                        # for first line, remove the data directive from it
+                        content.append(line[:line.index('.')].strip())
+                    # ignore the rest of the lines
+                else:
+                    content.append(line)
+            content = list(filter(lambda line: line.strip() != '', content))
+            content.insert(1, '\t.incbin "{lz_path}"'.format(**vars()))
+            content = '\n'.join(content) + '\n'
+
+            edit_source_file(path, data_unit.content, content)
+
+            # if data_unit_idx == 0:
+            #     amt_extracted = data_unit_idx + 1
+            #     print('finished extracting {amt_extracted} compressed archives'.format(**vars()))
+            #     break
+
+
+        print('updated {update_label_count} labels'.format(**vars()))
+        print('ready to process: {0} compressed archives'.format(len(clean_data_units)))
+        print('not ready to process: {0} compressed archives'.format(len(data_units_to_process)))
+        print(count_found, len(compressed_archives) - count_found)
+        print(len(compressed_archives), len(regular_archives))
+
+    @staticmethod
     def dump_archives(rom_path, archive_path, argv, get_desc=False):
         desc = 'Invokes the textscript dumper on all non-compressed archive and outputs collective results'
         if get_desc:
@@ -64,7 +281,6 @@ class Commands:
         args = parser.parse_args(argv)
 
         archives = process_archives(archive_path)
-
         compressed_archives, regular_archives = cache_separate_archives_based_on_compression(archive_path, rom_path, archives)
 
         error_count_reg = 0
@@ -77,9 +293,16 @@ class Commands:
                         i = error_count_reg + correct_count_reg
                         print('reg[{i}]: @archive 0x{archive_ptr:X} (size: {archive_size})'.format(**vars()))
                         try:
-                            textscript_archive = dumper.TextScriptArchive.read_script(dumper.CommandContext(), archive_ptr, rom_file)
+                            # some non-compressed scripts must have their size specified to know they ended...
+                            # because their last scripts have been removed, but are still being pointed to.
+                            if archive_ptr in definitions.SCRIPT_SIZES:
+                                size = definitions.SCRIPT_SIZES[archive_ptr]
+                            else:
+                                size = None
+
+                            textscript_archive = dumper.TextScriptArchive.read_script(dumper.CommandContext(), archive_ptr, rom_file, size)
+
                             correct_count_reg += 1
-                            # print(textscript_archive.build())
                         except Exception:
                             error_count_reg += 1
                             if args.error: raise
@@ -94,15 +317,22 @@ class Commands:
                     size = os.path.getsize(decompress_path) - 4 # must not account for the compression header!
                     with open(decompress_path, 'rb') as decompressed_file:
                         i = error_count_comp + correct_count_comp
-                        print('comp[{i}]: @archive 0x{archive_ptr:X} (size: {archive_size})'.format(**vars()))
+                        #print('comp[{i}]: @archive 0x{archive_ptr:X} (size: {archive_size})'.format(**vars()))
                         try:
                             textscript_archive = dumper.TextScriptArchive.read_script(dumper.CommandContext(), 4, decompressed_file, size)
+
+                            # test matching
+                            decompressed_file.seek(4)
+                            if textscript_archive.serialize() != decompressed_file.read():
+                                raise TextScriptScannerException('archive {archive_ptr:X} does not match binary input'.format(**vars()))
+
                             correct_count_comp += 1
                         except Exception:
                             error_count_comp += 1
                             if args.error: raise
 
                     os.remove(decompress_path)
+
                  print('error_count_compressed: %d' % (error_count_comp))
                  print('correct_count_compressed: %d' % (correct_count_comp))
 
@@ -110,8 +340,7 @@ class Commands:
         print(len(compressed_archives), len(regular_archives))
 
 
-
-def cache_to_disk(func, cache_path, *args, **kwargs):
+def cache_to_file(func, cache_path, *args, **kwargs):
     """
     caches the result of :func: to a file so that it doesn't have to be computed more than once
     :param func: function with expensive computation
@@ -151,8 +380,8 @@ def separate_archives_based_on_compression(rom_path, archives):
 def cache_separate_archives_based_on_compression(archive_path, rom_path, archives):
     # find the compressed and non-compressed archives and cache the result to disk
     cache_path = os.path.join(definitions.CACHE_DIR, separate_archives_based_on_compression.__name__ + '.' + os.path.basename(archive_path) + '.cache')
-    return cache_to_disk(separate_archives_based_on_compression, cache_path,
-                                                          rom_path, archives)
+    return cache_to_file(separate_archives_based_on_compression, cache_path,
+                         rom_path, archives)
 
 
 def process_archives(archive_path) -> List[int]:
@@ -260,7 +489,11 @@ def getLZ77CompressedSize(bin_file, compressed_ea):
     bin_file.seek(original_addr)
     return (ea - compressed_ea, decompSize)
 
+
+
 def gbagfx_decompress_at(rom_file, compressed_data_address: int, output_path: str):
+    gbagfx_bin = os.path.join(definitions.ROM_REPO_DIR, 'tools', 'gbagfx', 'gbagfx')
+
     # write from compressed data address onwards to a file. This is because size is not known, but the LZ77 decompression
     # can tell
     slice_file_path = output_path + '.tmp_slice.lz'
@@ -269,19 +502,71 @@ def gbagfx_decompress_at(rom_file, compressed_data_address: int, output_path: st
         slice_file.write(rom_file.read())
 
     # decompress file
-    gbagfx_bin = os.path.join(definitions.ROM_REPO_DIR, 'tools', 'gbagfx', 'gbagfx')
     status = os.system('{gbagfx_bin} {slice_file_path} {output_path} 2> /dev/null'.format(**vars()))
 
     os.remove(slice_file_path)
     return status
 
-def gbagfx_compress(input_path: str, output_lz_path: str):
-    if not output_lz_path.endswith('.lz'):
-        raise ValueError('lz_path must end with .lz as that is expected by gbagfx')
 
+def gbagfx_decompress(lz_path: str, output_bin_path: str):
     gbagfx_bin = os.path.join(definitions.ROM_REPO_DIR, 'tools', 'gbagfx', 'gbagfx')
+
+    if not lz_path.endswith('.lz'):
+        raise ValueError('a compressed input file must end with .lz as that is expected by gbagfx')
+
+    return os.system('{gbagfx_bin} {lz_path} {output_bin_path}'.format(**vars()))
+
+
+
+def gbagfx_compress(input_path: str, output_lz_path: str):
+    gbagfx_bin = os.path.join(definitions.ROM_REPO_DIR, 'tools', 'gbagfx', 'gbagfx')
+
+    if not output_lz_path.endswith('.lz'):
+        raise ValueError('a compressed input file must end with .lz as that is expected by gbagfx')
+
     return os.system('{gbagfx_bin} {input_path} {output_lz_path} '.format(**vars()))
 
+
+class DataUnit:
+    class DataUnitException(Exception): pass
+
+    def __init__(self, source_unit):
+        if 'ea' not in source_unit.keys() and 'content' not in source_unit.keys():
+            raise DataUnit.DataUnitException('source_unit must contain ea and content')
+        self.source_unit = source_unit
+        self.address = source_unit['ea']
+        self.content = source_unit['unit']['content']
+        self.size = self.compute_size()
+
+    def compute_size(self):
+        size = 0
+        for line in self.content.split('\n'):
+            if '.byte' in line:
+                size += len(line.split(' ')) - 1
+            elif '.word' in line:
+                size += 4 * (len(line.split(' ')) - 1)
+
+        return size
+
+def write_subfile(input_path, output_path, start_address, size):
+    start_address &= ~0x8000000
+
+    with open(input_path, 'rb') as input_file:
+        input_file.seek(start_address)
+        with open(output_path, 'wb') as output_file:
+            output_file.write(input_file.read(size))
+
+def edit_source_file(s_path, content, replacement):
+    with open(s_path, 'r') as f:
+        file_data = f.read()
+
+    if content in file_data:
+
+        print('REPLACE ({s_path}): {replacement}'.format(**vars()))
+        file_data = file_data.replace(content, replacement)
+
+    with open(s_path, 'w') as f:
+        f.write(file_data)
 
 def size_scan_archives(bin_file, archives_path):
     archives = read_archives(archives_path)

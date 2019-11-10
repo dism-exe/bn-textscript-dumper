@@ -2,6 +2,8 @@ import unittest
 import os
 import io
 from text_script_dumper import *
+import text_script_dumper as uut_dumper
+import text_script_scanner
 import definitions
 
 class RegressionTests(unittest.TestCase):
@@ -178,14 +180,13 @@ class CommandParsingTests(unittest.TestCase):
             self.fail('%s: could not read commad: %s %s' % (cmdName, cmd, params))
         self.assertEqual(out.cmd, cmd, '%s: invalid command read' % cmdName)
         self.assertEqual(out.params, params, '%s: invalid parameters read' % cmdName)
-        sect = TextScriptCommand.find_cmd(cmd, params, self.select_sect(out.with_interpreter_s))
+        sect = TextScriptCommand.find_command_section(cmd, params, self.select_sect(out.with_interpreter_s))
         if not sect:
-            self.fail('%s: could not find commad section: %s %s' % (cmdName, cmd, params))
+            self.fail('%s: could not find commad section for %s %s' % (cmdName, cmd, params))
         self.assertEqual(sect['name'], cmdName, 'invalid command found')
         self.assertEqual(TextScriptCommand.convert_cmd_name(sect['name']),
                           TextScriptCommand.get_cmd_macro(self.command_context, cmd, params, prioritize_s),
                           '%s: failed to convert the command to the correct name' % (cmdName))
-        # print(sect['name'])
         self.assertEqual(byteStream.tell(), startAddr + out.size,
                           '%s: read additional bytes from stream' % cmdName)
 
@@ -288,23 +289,80 @@ class CommandParsingTests(unittest.TestCase):
 
 class ArchiveListTests(unittest.TestCase):
 
-    # @unittest.skip('skipped till passing in development')
-    def test_no_crash_on_noncompressed_textscripts(self):
-        # asserts no crashes amongst all noncompressed archives in bn6f
-        import text_script_scanner
-        rom_path = os.path.join(definitions.ROM_REPO_DIR, 'bn6f.gba')
-        archive_path = os.environ['HOME'] + '/dev/dis/downloads/MMBNTextDumps/tpl/mmbn6cf-us.tpl' # FIXME: Hard path
-        text_script_scanner.Commands.dump_archives(rom_path, archive_path, ['--noncompressed', '--error'])
+    def setUp(self) -> None:
+        self.archive_path = os.environ['HOME'] + '/dev/dis/downloads/MMBNTextDumps/tpl/mmbn6cf-us.tpl' # FIXME: Hard path
+        self.rom_path = os.path.join(definitions.ROM_REPO_DIR, 'bn6f.gba')
+
+        archives = text_script_scanner.process_archives(self.archive_path)
+        compressed_archives, regular_archives = text_script_scanner.cache_separate_archives_based_on_compression(self.archive_path, self.rom_path, archives)
+        self.compressed_archives = compressed_archives
+        self.noncompressed_archives = regular_archives
+
+
 
     # @unittest.skip('skipped till passing in development')
-    def test_no_crash_on_compressed_textscripts(self):
+    def test_noncompressed_textscripts(self):
         # asserts no crashes amongst all noncompressed archives in bn6f
-        import text_script_scanner
-        rom_path = os.path.join(definitions.ROM_REPO_DIR, 'bn6f.gba')
-        archive_path = os.environ[
-                           'HOME'] + '/dev/dis/downloads/MMBNTextDumps/tpl/mmbn6cf-us.tpl'  # FIXME: Hard path
+        # and that they match original binary
+        for archive_ptr, archive_size in self.noncompressed_archives:
+            # some non-compressed scripts must have their size specified to know they ended...
+            # because their last scripts have been removed, but are still being pointed to.
+            if archive_ptr in definitions.SCRIPT_SIZES:
+                size = definitions.SCRIPT_SIZES[archive_ptr]
+            else:
+                size = None
 
-        text_script_scanner.Commands.dump_archives(rom_path, archive_path, ['--compressed', '--error'])
+            with open(self.rom_path, 'rb') as rom_file:
+                textscript_archive = uut_dumper.TextScriptArchive.read_script(uut_dumper.CommandContext(), archive_ptr,
+                                                                      rom_file, size)
+
+    # @unittest.skip('skipped till passing in development')
+    def test_compressed_textscripts(self):
+        # asserts no crashes amongst all noncompressed archives in bn6f
+        # and that they match original binary
+        with open(self.rom_path, 'rb') as rom_file:
+            for archive_ptr, archive_size in self.compressed_archives:
+                self.run_test_compressed_archive(rom_file, archive_ptr)
+
+    def test_compressed_8779B1C(self):
+        with open(self.rom_path, 'rb') as rom_file:
+            self.run_test_compressed_archive(rom_file, 0x779B1C)
+
+    def run_test_compressed_archive(self, rom_file, archive_ptr):
+        decompress_path = 'TextScript%07X.lz.bin' % (archive_ptr)
+        text_script_scanner.gbagfx_decompress_at(rom_file, archive_ptr, decompress_path)
+        size = os.path.getsize(decompress_path) - 4  # must not account for the compression header!
+        with open(decompress_path, 'rb') as decompressed_file:
+            try:
+                textscript_archive = uut_dumper.TextScriptArchive.read_script(uut_dumper.CommandContext(), 4, decompressed_file, size)
+
+                # test matching
+                def assert_archive_binary_matches(text_script_archive: TextScriptArchive, bin_file):
+                    rel_pointers = text_script_archive.serialize_rel_pointers()
+                    self.assertEqual(rel_pointers, bin_file.read(len(rel_pointers)),
+                                     'rel. pointers mismatch')
+
+                    for script_idx, text_script in enumerate(text_script_archive.text_scripts):
+                        for unit in text_script.units:
+                            address = bin_file.tell()
+                            if type(unit) is GameString:
+                                content = unit.text
+                                self.assertEqual(bin_file.read(len(unit.data)), unit.data,
+                                                 'mismatch in script {script_idx} at address 0x{address:X}: {content}'.format(**vars()))
+                            if type(unit) is TextScriptCommand:
+                                content = unit.macro
+                                unit_data = unit.serialize()
+                                self.assertEqual(bin_file.read(len(unit_data)), unit_data,
+                                                'mismatch in script {script_idx} at address 0x{address:X}: {content}'.format(**vars()))
+                                address += len(unit_data)
+
+                decompressed_file.seek(4)
+                assert_archive_binary_matches(textscript_archive, decompressed_file)
+
+            finally:
+                os.remove(decompress_path)
+
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -78,7 +78,8 @@ class ModuleState:
     address = 0
 
     # the select command is dynamic unlike any other command, so it's its own category
-    DYNAMIC_CMDS = [b'\xed']
+    # TODO this can be determined by the dadd entry in the sections
+    DYNAMIC_CMDS = [b'\xed', b'\xf0']
 
     # priority commands are prioritized by their input, ie. their bases are in conflict but are
     # respolved with priority. this only applies to jump.
@@ -133,7 +134,6 @@ class TextScriptException(Exception):
 class InvalidTextScriptCommandException(Exception):
     pass
 
-
 def error(exception, msg, critical=True):
     """
     for debugging purposes, sometimes it's useful to see the faulty output than to
@@ -167,12 +167,14 @@ class TextScript:
         self.size = size
 
     @staticmethod
-    def read(command_context: CommandContext, bin_file, size: int, archive_idx: int):
+    def read(command_context: CommandContext, bin_file, size: int, archive_idx: int, use_first_interpreter=True):
         """
         reads a textscript segment that terminates with E6 or has a known size
         :param bin_file: binary file stream to read the file from
         :param size: if None, this is computed as the text script is parsed, and size is determined
-                     at the first occurance of an E6 (or termination command)
+            at the first occurance of an E6 (or termination command)
+        :param use_first_interpreter: assumed True, but sometimes this will fail. This can be anticipated with failure if
+            size is provided.
         :return: TextScript object representation
         """
         addr = bin_file.tell()
@@ -194,10 +196,7 @@ class TextScript:
                 return bin_file.tell() < addr + size
 
         def is_valid_game_string_char(byte) -> bool:
-            try:
-                return byte != b'' and (ord(byte) < 0xE5 or ord(byte) == 0xE6 or ord(byte) == 0xE9)
-            except TypeError:
-                raise
+            return byte != b'' and (ord(byte) < 0xE5 or ord(byte) == 0xE6 or ord(byte) == 0xE9)
 
         # process TextScript units (commands or strings)
         byte = bin_file.read(1)
@@ -234,17 +233,15 @@ class TextScript:
                 strings, byte = read_string_lines(bin_file, byte, size)
                 if strings != []:
                     units.extend(strings)
-                    # make sure we didn't encounter an end_script command, otherwise our unit processing is over
-                    if byte == b'\xE6':
-                        break
                     # if a command comes right after the text in the same script, it needs to be parsed as well
-                    # read_string_lines already advanced to the command byte, so it has to be interpreted too, next iteration.
-                    elif byte > b'\xE6':
+                    #   read_string_lines already advanced to the command byte, so it has to be interpreted too, next iteration.
+                    # this is also true if the last byte read is at the size of the script, BUT, it hasn't been interpreted yet!
+                    if not in_script(bin_file, byte, size) or byte > b'\xE6':
                         continue
             else:
                 # read current bytecode command
                 units.append(TextScriptCommand.read(command_context, bin_file, byte,
-                                                    TextScriptCommand.guess_interpreter(bin_file, byte)))
+                                                    use_first_interpreter))
 
             # do while the script has not ended
             if not in_script(bin_file, byte, size):
@@ -341,15 +338,20 @@ class TextScriptArchive:
 
     def serialize(self) -> bytes:
         out = b''
+        out += self.serialize_rel_pointers()
+        # serialize scripts
+        for text_script in self.text_scripts:
+            out += text_script.serialize()
+        return out
+
+    def serialize_rel_pointers(self) -> bytes:
+        out = b''
         # since rel. pointers are hwords, a \x00 has to be appended if the pointer is < 0xFF
         for b in self.rel_pointers:
             if b > 0xFF:
                 out += bytes([b & 0xFF, b >> 8])
             else:
                 out += bytes([b, 0x00])
-        # serialize scripts
-        for text_script in self.text_scripts:
-            out += text_script.serialize()
         return out
 
     def build(self) -> str:
@@ -403,8 +405,9 @@ class TextScriptArchive:
         address = bin_file.tell()
         rel_pointers = TextScriptArchive.read_relative_pointers(bin_file, address)
         last_script_pointer = max(rel_pointers)
+        assume_first_interpreter = True # assumed unless something goes bad
 
-        print('// numScripts: {0}, [{1}, {2}]'.format(len(rel_pointers), hex(rel_pointers[0]), hex(rel_pointers[-1])))
+        # print('// numScripts: {0}, [{1}, {2}]'.format(len(rel_pointers), hex(rel_pointers[0]), hex(rel_pointers[-1])))
 
         scripts = []
         for i, ptr in enumerate(rel_pointers):
@@ -425,15 +428,29 @@ class TextScriptArchive:
                 if script_size == 0:
                     scripts.append(TextScript(command_context, [], i, ptr, 0))
                 else:
-                    scripts.append(TextScript.read(command_context, bin_file, script_size, i))
+                    # try using both interpreters to see which one generates correct TextScript with the right size
+                    rewind_addr = bin_file.tell()
+                    try:
+                        scripts.append(TextScript.read(command_context, bin_file, script_size, i, assume_first_interpreter))
+                    except (InvalidTextScriptCommandException, TextScriptException) as e:
+                        bin_file.seek(rewind_addr) # rewind,and try again
+                        try:
+                            # flip assumptions for next time, since the trend may continue.
+                            assume_first_interpreter = not assume_first_interpreter
+                            scripts.append(TextScript.read(command_context, bin_file, script_size, i, assume_first_interpreter))
+                        except (InvalidTextScriptCommandException, TextScriptException) as e:
+                            # failure on both assumptions -- might be unrelated to the interpreter used
+                            raise
             else:
-                pass
                 # invalid state
                 # TODO refactor: to TextScriptError
                 raise TextScriptException('invalid state: reading a script in a different location from its pointer {0} != {1}'
                                           .format(hex(bin_file.tell() - address), hex(ptr)))
 
             if archive_size and bin_file.tell() - address >= archive_size:
+                # check for tail empty scripts, don't cut them out, just output them all
+                if len(scripts) > 0 and ptr + scripts[-1].size == archive_size:
+                    continue
                 break
 
         # create Script object
@@ -482,43 +499,35 @@ class TextScriptCommand:
                 'compiling command failed due to its length not matching: %s' % (compiled_cmd))
         return compiled_cmd
 
+    def __str__(self):
+        return self.macro
+
     @staticmethod
-    def read(command_context: CommandContext, bin_file, cmd: bytes, with_interpreter_s) -> 'TextScriptCommand':
+    def read(command_context: CommandContext, bin_file, cmd: bytes, use_first_interpreter) -> 'TextScriptCommand':
         """
-        use guess_interpreter to determine likely value of with_interpreter_s.
-        with_interpreter_s is the distinction between dilog and visual commands.
+        :param use_first_interpreter: is the distinction between dilog and visual commands.
+            an entire script may use one or another interpreter.
+            However, the first interperter has most of the commands shared between the two, so it is fallen on if
+            a command is not found in the second.
         """
-        """
-        attempts to read the command on both interpreters, given priority
-        """
-        select_sects = lambda select: [command_context.sects, command_context.sects_s][select]
-        out = TextScriptCommand.read_cmd_from_sects(bin_file, cmd, select_sects(with_interpreter_s))
-        interpreter_used = with_interpreter_s
-        if not out:
-            out = TextScriptCommand.read_cmd_from_sects(bin_file, cmd, select_sects(not with_interpreter_s))
-            interpreter_used = not with_interpreter_s
+        select_sects = lambda select: [command_context.sects_s, command_context.sects][select]
+        out = TextScriptCommand.read_cmd_from_sects(bin_file, cmd, select_sects(use_first_interpreter))
+
+        # if a command was not found in the second interpreter, fall back and find it in the first.
+        # this is not true the other way around. The first interpreter should contain all of its commands.
+        if not out and not use_first_interpreter:
+            use_first_interpreter = not use_first_interpreter
+            out = TextScriptCommand.read_cmd_from_sects(bin_file, cmd, select_sects(use_first_interpreter))
+
         if not out:
             raise InvalidTextScriptCommandException(
                   'invalid cmd %s detected at 0x%x' % (cmd, bin_file.tell()))
-        return TextScriptCommand(out[0], out[1], interpreter_used,
-                                 TextScriptCommand.get_cmd_macro(command_context, out[0], out[1], interpreter_used))
 
-    @staticmethod
-    def guess_interpreter(bin_file, cmd: bytes) -> bool:
-        # read command, this can be using either interpreters, but sometimes it can lead to conflicts
-        if cmd in ModuleState.CONFLICT_CMDS:
-            # check if there's a 0xFF in the hypothetical parameters of the command, this is a way
-            # to tell if this a ts_check_global or ts_check_game_version
-            if cmd == b'\xef':
-                if b'\xff' in bin_file.read(5):
-                    bin_file.seek(bin_file.tell() - 5)  # rewind
-                    return False
-                else:
-                    return True
-            else:
-                return False
-        else:
-            return True
+        # FIXME refactor this boolean inconsistency with which interpreter to use...
+        use_second_interpreter = not use_first_interpreter
+        return TextScriptCommand(out[0], out[1], use_second_interpreter,
+                                 TextScriptCommand.get_cmd_macro(command_context, out[0], out[1], use_second_interpreter))
+
 
     @staticmethod
     def find_valid_cmd_base(cmd: bytes, sects) -> (bool, dict):
@@ -587,7 +596,7 @@ class TextScriptCommand:
         return False
 
     @staticmethod
-    def find_cmd(cmd: bytes, params: bytes, sects: list) -> dict or None:
+    def find_command_section(cmd: bytes, params: bytes, sects: list) -> dict or None:
         for sect in sects:
             if TextScriptCommand.valid_cmd(cmd, params, sect):
                 return sect
@@ -619,9 +628,9 @@ class TextScriptCommand:
         :return: string representing the macro for the command
         """
         select_sects = lambda select: [command_context.sects, command_context.sects_s][select]
-        sect = TextScriptCommand.find_cmd(cmd, params, select_sects(prioritize_s))
+        sect = TextScriptCommand.find_command_section(cmd, params, select_sects(prioritize_s))
         if not sect:
-            sect = TextScriptCommand.find_cmd(cmd, params, select_sects(not prioritize_s))
+            sect = TextScriptCommand.find_command_section(cmd, params, select_sects(not prioritize_s))
         if not sect:
             error(InvalidTextScriptCommandException,
                   'could not find command %s %s' % (str(cmd), str(params)),
@@ -656,6 +665,8 @@ class TextScriptCommand:
         # (like jump)
         if cmd in ModuleState.PRIORITY_CMDS:
             cmd += bin_file.read(1)
+
+        # read in bytes until the base is read and the parameters are determined
         for i in range(4):  # max number of base bytes per command
             num_params, sect = TextScriptCommand.find_param_count(cmd, sects)
             if num_params >= 0:
@@ -685,17 +696,46 @@ class TextScriptCommand:
                 params = []
                 error(InvalidTextScriptCommandException, 'invalid num_parameters states detected at %s' % cmd)
 
-            # edge case: select command is dynamic. assumed dynamic until it encounters a command or after
-            # 3 additional parameters. Values allowed are <E5 and FF
-            if cmd[0:1] in ModuleState.DYNAMIC_CMDS:
-                for i in range(3):
+            # dynamic commands also take in data, not just parameters. Data can be 0xFF, or <0xE5
+            # different dynamic commands have their own maximum number of dynamci arguments.
+            if cmd in ModuleState.DYNAMIC_CMDS:
+                def parse_dynamic_command_length(cmd, params):
+                    # TODO: load command specific context from config sects
+                    # parse the length, command-dependant
+                    # the length refers to the entire command bytecode
+
+                    # ts_jump_random
+                    if cmd == b'\xf0':
+                        # TODO: for some reason, high numbers are specified when no more than 8 pairs are ever given
+                        length = min(params[0] & ~0x3F, 16 + len(cmd) + len(params))
+                    # ts_select
+                    elif cmd == b'\xed':
+                        length = params[0]
+                    else:
+                        raise TextScriptException('cound not determine dynamic length of command {cmd}'.format(**vars()))
+                    return length
+
+                max_dynamic_args = parse_dynamic_command_length(cmd, params) - len(cmd) - len(params)
+                num_dynamic_args = 0
+                last_param = False
+                while True:
                     byte = bin_file.read(1)
-                    if byte != b'\xff' and byte >= b'\xe5':
+                    if byte == b'\xff':
+                        last_param = True
+
+                    def dynamic_command_ended(cmd, params, byte, num_dynamic_args, max_dynamic_args):
+                        start_of_new_command = lambda byte: byte != b'\xff' and byte >= b'\xe5'
+
+                        return start_of_new_command(byte) or num_dynamic_args >= max_dynamic_args
+
+                    if dynamic_command_ended(cmd, params, byte, num_dynamic_args, max_dynamic_args):
                         # rewind, doesn't belong to this dynamic command
                         bin_file.seek(bin_file.tell() - 1)
                         break
                     else:
                         params += byte
+                    num_dynamic_args += 1
+
 
             return cmd, params
         else:
@@ -712,6 +752,9 @@ class GameString:
 
     def to_string(self):
         return GameString.bn6f_str(self.data, GameString.get_tbl(self.tbl_path))
+
+    def __str__(self):
+        return self.to_string()
 
     @staticmethod
     def get_tbl(path):
