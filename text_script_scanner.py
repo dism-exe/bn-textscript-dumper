@@ -69,6 +69,7 @@ class Commands:
         # find the compressed and non-compressed archives and cache the result to disk
         compressed_archives, regular_archives = cache_separate_archives_based_on_compression(archive_path, rom_path, archives)
 
+
         compressed_archives_path = os.path.join(definitions.ROM_REPO_DIR, 'data', 'textscript', 'compressed')
         error_messages = []
         for filename in os.listdir(compressed_archives_path):
@@ -139,6 +140,186 @@ class Commands:
         print(len(compressed_archives), len(regular_archives))
 
     @staticmethod
+    def integrate_archives(rom_path, archive_path, argv,  get_desc=False):
+        desc = 'reads the repository and locates where the text archives are in the source'
+        if get_desc:
+            return desc
+
+        parser = argparse.ArgumentParser(description=desc)
+        parser.prog = parser.prog + ' ' + Commands.locate_archives.__name__
+        parser.add_argument('--recache', action='store_true', help='deleted cached files related to this command')
+        parser.add_argument('--noncompressed', action='store_true', default=False)
+        args = parser.parse_args(argv)
+
+        archives = process_archives(archive_path)
+
+        # find the compressed and non-compressed archives and cache the result to disk
+        compressed_archives, regular_archives = cache_separate_archives_based_on_compression(archive_path, rom_path, archives)
+
+        # read repository and tokenize it into units for analysis
+        root_dir = definitions.ROOT_DIR
+        cache_path = '{root_dir}/.cache/repo_units.cache'.format(**vars())
+        source_units = cache_load_source_units(cache_path, args.recache)
+
+        # integrating compressed archives
+        # TODO: define options for these based on noncompressed flag
+        # TODO: integrate incbin_compressed_archives into this command
+        def find_and_categorize_archive_units(compressed_archives):
+            # find and filter out archives
+            incbin_archives = []
+            data_archives = []
+            data_err_size_archives = []
+            data_nested_archives = []
+            other_archives = []
+            for archive_ptr, archive_size in compressed_archives:
+                archive_unit = find_archive_unit(source_units, archive_ptr)
+                if archive_unit is None:
+                    # if the data hasn't been recovered yet from a big buffer
+                    archive_in_unit = find_archive_in_unit(source_units, archive_ptr)
+                    if archive_in_unit is not None:
+                        data_nested_archives.append((DataUnit(archive_in_unit), archive_ptr, archive_size))
+                    else:
+                        raise TextScriptScannerException('could not find text archive {archive_ptr:X}'.format(**vars()))
+                else:
+                    data_unit = DataUnit(archive_unit)
+                    if data_unit.size == 0:
+                        if '.incbin' in data_unit.content:
+                            incbin_archives.append((data_unit, archive_ptr, archive_size))
+                        else:
+                            print('error: archive {archive_ptr:X} has an .incbin and data in it'.format(**vars()))
+                            other_archives.append((data_unit, archive_ptr, archive_size))
+                    elif data_unit.size  == archive_size:
+                        data_archives.append((data_unit, archive_ptr, archive_size))
+                    else:
+                        print('ERROR SIZE', data_unit.size, archive_size)
+                        data_err_size_archives.append(data_unit)
+            return incbin_archives, data_archives, data_err_size_archives, data_nested_archives, other_archives
+
+        def extract_embedded_compressed_archives(data_nested_archives):
+            def join_archives_by_unit(data_nested_archives):
+                out = {}
+                for data_unit, archive_ptr, archive_size in data_nested_archives:
+                    unit_ea = data_unit.source_unit['ea'] & ~0x8000000
+                    if unit_ea not in out:
+                        out[unit_ea] = (data_unit, [])
+                    out[unit_ea][1].append((archive_ptr, archive_size))
+                return out
+
+            units = join_archives_by_unit(data_nested_archives)
+
+            for unit_ea in units.keys():
+                data_unit, archives_list = units[unit_ea]
+                print('SIZE', data_unit.size)
+                data_unit.compute_size()
+                archives_list = sorted(archives_list, key= lambda k: k[0])
+                print(data_unit.source_unit['name'], archives_list)
+
+                # create continuous segments to build
+                segments = []
+                is_compressed_archive = True
+                if archives_list[0][0] - unit_ea > 0:
+                    segments.append((unit_ea, archives_list[0][0], not is_compressed_archive))
+                for i, archive in enumerate(archives_list):
+                    archive_ptr, archive_size = archive
+                    print('ARCHIVE_SIZE {archive_size}'.format(**vars()))
+                    # assert the archive is embedded in the unit
+                    if archive_ptr < unit_ea or archive_ptr + archive_size > unit_ea + data_unit.size:
+                        raise TextScriptScannerException('archive (0x{0:07X}, 0x{1:07X}) does not fall within unit (0x{2:07X}, 0x{3:07X})\'s range'
+                                                         .format(archive_ptr, archive_ptr + archive_size, unit_ea, unit_ea + data_unit.size))
+                    segments.append((archive_ptr, archive_ptr + archive_size, is_compressed_archive))
+                    # assert this is continuous to the next element
+                    if i != len(archives_list) - 1:
+                        if archive_ptr + archive_size < archives_list[i+1][0]:
+                            segments.append((archive_ptr + archive_size, archives_list[i+1][0], not is_compressed_archive))
+                        elif archive_ptr + archive_size > archives_list[i+1][0]:
+                            raise TextScriptScannerException('segments found to be overlapping at {archive_ptr}'.format(**vars()))
+                    else:
+                        if archive_ptr + archive_size < unit_ea + data_unit.size:
+                            segments.append((archive_ptr + archive_size, unit_ea + data_unit.size, not is_compressed_archive))
+
+                # build segments
+                content = DataUnit.filter_content_data_definitions(data_unit.content)
+                with open(rom_path, 'rb') as rom_file:
+                    for i, seg in enumerate(segments):
+                        seg_start, seg_end, is_compressed_archive = seg
+                        print('\t(0x{seg_start:X}, 0x{seg_end:X}, .incbin? {is_compressed_archive})'.format(**vars()))
+                        if i == 0:
+                            if is_compressed_archive:
+                                raise TextScriptScannerException('first segment should always be the original data unit')
+                            rom_file.seek(seg_start)
+
+                            # we're putting data in byte form, not word form, so update label
+                            # if 'dword_' in content and '::' in content:
+                            #     label = content[content.index('dword'):content.index('::')+2]
+                            #     new_label = label.replace('dword_', 'byte_')
+                            #     source_relabel(label[:-2], new_label[:-2])
+                            #     content = content.replace(label, new_label)
+
+                            content = DataUnit.build_content_data_byte_definitions(content, rom_file.read(seg_end - seg_start)) + '\n'
+                        else:
+                            if is_compressed_archive:
+                                lz_name = 'CompText{0:07X}'.format(seg_start | 0x8000000)
+                                lz_path = os.path.join('data', 'textscript', 'compressed', lz_name + '.s.lz')
+                                abs_lz_path = os.path.join(definitions.ROM_REPO_DIR, lz_path)
+
+                                # generate lz file
+                                write_subfile(rom_path, abs_lz_path, seg_start, seg_end - seg_start)
+
+                                # incbin lz file
+                                content += DataUnit.build_content_incbin('{lz_name}::'.format(**vars()), lz_path) + '\n'
+                            else:
+                                label = 'byte_{0:07X}'.format(seg_start | 0x8000000)
+                                rom_file.seek(seg_start)
+                                content += DataUnit.build_content_data_byte_definitions(label + '::', rom_file.read(seg_end - seg_start)) + '\n'
+
+                # edit source
+                edit_source_file(get_source_unit_abs_path(data_unit.source_unit), data_unit.content, content)
+
+        def process_incbins_ensure_correct_label_and_path(incbin_archives):
+            # rename all comp_xxx's labels and move them to textscript/compressed/
+            for archive_unit, archive_ptr, archive_size in incbin_archives:
+                incbin_path = archive_get_incbin_path(archive_unit.content)
+                if 'textscript/compressed' not in incbin_path:
+                    print('INCBIN_PATH', incbin_path)
+
+                    # determine the name of the compressed file. Update the label if it's a generic data label
+                    label = archive_unit.source_unit['name']
+                    lz_name = label.replace('dword_', 'CompText')
+                    lz_name = lz_name.replace('byte_', 'CompText')
+                    lz_name = lz_name.replace('comp_', 'CompText')
+                    if lz_name.startswith('off_'):
+                        lz_name = lz_name.replace('off_', 'EmptyCompText')
+                    if label != lz_name:
+                        source_relabel(label, lz_name)
+                    lz_path = os.path.join('data', 'textscript', 'compressed', lz_name + '.s.lz')
+                    abs_lz_path = os.path.join(definitions.ROM_REPO_DIR, lz_path)
+                    print('LZ_PATH', lz_path)
+
+                    # generate the compressed file
+                    rom_path = os.path.join(definitions.ROM_REPO_DIR, definitions.ROM_NAME) + '.gba'
+                    write_subfile(rom_path, abs_lz_path, archive_ptr & ~0x8000000, archive_size)
+
+                    # update content to incbin the new path
+                    new_content = archive_unit.content.replace(incbin_path, lz_path)
+
+                    edit_source_file(get_source_unit_abs_path(archive_unit.source_unit), archive_unit.content, new_content)
+
+        # integrating noncompressed archives
+
+
+        # ---
+        incbin_archives, data_archives, data_err_size_archives, data_nested_archives, other_archives = find_and_categorize_archive_units(compressed_archives)
+        extract_embedded_compressed_archives(data_nested_archives)
+
+        print('data_archives count: {0}'.format(len(data_archives)))
+        print('incbin_archives count: {0}'.format(len(incbin_archives)))
+        print('data_nested_archives count: {0}'.format(len(data_nested_archives)))
+        print('data_err_size_archives count: {0}'.format(len(data_err_size_archives)))
+        print('other_archives count: {0}'.format(len(other_archives)))
+
+        print(len(compressed_archives), len(regular_archives))
+
+    @staticmethod
     def incbin_compressed_archives(rom_path, archive_path, argv,  get_desc=False):
         desc = 'reads the repository and incbins .s.lz files for every compressed archive'
         if get_desc:
@@ -154,38 +335,10 @@ class Commands:
         # find the compressed and non-compressed archives and cache the result to disk
         compressed_archives, regular_archives = cache_separate_archives_based_on_compression(archive_path, rom_path, archives)
 
-        def convert_unit_class_to_dict():
-            units = source_read.main(info=False)
-            for unit in units:
-                def convert_unit(unit):
-                    for key in unit.keys():
-                        if type(unit[key]) is source_read.AsmFile.Unit:
-                            unit[key] = unit[key].__dict__
-                        elif type(unit[key]) is dict:
-                            convert_unit(unit[key])
-                        elif key == 'pool':
-                            for i, pool in enumerate(unit['pool']):
-                                if type(pool) is dict:
-                                    convert_unit(pool)
-
-                convert_unit(unit)
-            return units
-
+        # read repository and tokenize it into units for analysis
         root_dir = definitions.ROOT_DIR
         cache_path = '{root_dir}/.cache/repo_units.cache'.format(**vars())
-        if args.recache:
-            os.remove(cache_path)
-        source_units = cache_to_file(convert_unit_class_to_dict, cache_path)
-        print('source_units', len(source_units))
-
-        def find_archive(archives, ptr):
-            if not ptr:
-                return None
-            ptr &= ~0x8000000
-            for archive_ptr, size in archives:
-                if ptr == archive_ptr:
-                    return archive_ptr, size
-            return None
+        source_units = cache_load_source_units(cache_path, args.recache)
 
         count_found = 0
         size = 0
@@ -197,7 +350,7 @@ class Commands:
                 archive_ptr, archive_size = archive
                 data_unit = DataUnit(source_unit)
 
-                if data_unit.size - 4 == archive_size:
+                if data_unit.size == archive_size:
                     clean_data_units.append(data_unit)
                 else:
                     data_units_to_process.append(data_unit)
@@ -209,11 +362,9 @@ class Commands:
         # replace clean archives with an .incbin
         update_label_count = 0
         for data_unit_idx, data_unit in enumerate(clean_data_units):
-            # remove line number from path and set as absolute path
-            path = data_unit.source_unit['path']
-            path = path[:path.index(':')]
-            path = os.path.join(definitions.ROM_REPO_DIR, path)
 
+            # remove line number from path and set as absolute path
+            path = get_source_unit_abs_path(data_unit.source_unit)
 
             # determine the name of the compressed file. Update the label if it's a generic data label
             label = data_unit.source_unit['name']
@@ -223,37 +374,17 @@ class Commands:
             if lz_name.startswith('off_'):
                 lz_name = lz_name.replace('off_', 'EmptyCompText')
             if label != lz_name:
-                # update the label in the repository
-                replacep_bin = os.path.join(definitions.ROM_REPO_DIR, 'replacep.sh')
-                print('UPDATE: {0} -> {1}'.format(label, lz_name))
-                cwd = os.getcwd()
-                os.chdir(definitions.ROM_REPO_DIR)
-                os.system('{replacep_bin} {label} {lz_name}'.format(**vars()))
-                os.chdir(cwd)
+                source_relabel(label, lz_name)
                 update_label_count += 1
             lz_path = os.path.join('data', 'textscript', 'compressed', lz_name + '.s.lz')
             abs_lz_path = os.path.join(definitions.ROM_REPO_DIR, lz_path)
-            print('LZ_PATH', lz_path)
 
             # generate the compressed file
-            rom_path = os.path.join(definitions.ROM_REPO_DIR, definitions.ROM_NAME) + '.gba'
-            write_subfile(rom_path, abs_lz_path, data_unit.address, data_unit.size - 4)
+            write_subfile(definitions.BASEROM_PATH, abs_lz_path, data_unit.address, data_unit.size)
 
             # edit the source, replace content with an incbin
-            content = []
-            for i, line in enumerate(data_unit.content.split('\n')):
-                if '.byte' in line or '.word' in line or '.hword' in line:
-                    if i == 0:
-                        # for first line, remove the data directive from it
-                        content.append(line[:line.index('.')].strip())
-                    # ignore the rest of the lines
-                else:
-                    content.append(line)
-            content = list(filter(lambda line: line.strip() != '', content))
-            content.insert(1, '\t.incbin "{lz_path}"'.format(**vars()))
-            content = '\n'.join(content) + '\n'
-
-            edit_source_file(path, data_unit.content, content)
+            content = DataUnit.build_content_incbin(data_unit.content, lz_path) + '\n'
+            edit_source_file(path, data_unit.content.replace(label, lz_name), content.replace(label, lz_name))
 
             # if data_unit_idx == 0:
             #     amt_extracted = data_unit_idx + 1
@@ -338,6 +469,81 @@ class Commands:
 
         print('compressed to noncompressed scanned')
         print(len(compressed_archives), len(regular_archives))
+
+
+
+def get_source_unit_abs_path(source_unit):
+    path = source_unit['path']
+    path = path[:path.index(':')]  # remove line number from the path <rel_path>:<line_num>
+    return os.path.join(definitions.ROM_REPO_DIR, path)
+
+
+def archive_get_incbin_path(archive_content):
+    if '.incbin' not in archive_content:
+        return None
+
+    # filter to incbin statement
+    incbin_line = archive_content[archive_content.index('.incbin') + 7:]
+
+    if '\n' in incbin_line:
+        incbin_line = incbin_line[:incbin_line.index('\n')]
+
+    # filter for path between quotes
+    return incbin_line[incbin_line.index('"') + 1:incbin_line.rindex('"')]
+
+
+def find_archive(archives, ptr):
+    if not ptr:
+        return None
+    ptr &= ~0x8000000
+    for archive_ptr, size in archives:
+        if ptr == archive_ptr:
+            return archive_ptr, size
+    return None
+
+
+def find_archive_unit(source_units, archive_ptr):
+    archive_ptr |= 0x8000000
+    for source_unit in filter(lambda u: 'ea' in u and u['ea'] is not None, source_units):
+        if source_unit['ea'] == archive_ptr:
+            return source_unit
+    return None
+
+
+def find_archive_in_unit(source_units, archive_ptr):
+    archive_ptr |= 0x8000000
+    address_source_units = list(filter(lambda u: 'ea' in u and u['ea'] is not None, source_units))
+    for i, source_unit in enumerate(address_source_units):
+        if i != len(address_source_units) - 1:
+            if source_unit['ea'] < archive_ptr < address_source_units[i + 1]['ea']:
+                return source_unit
+    return None
+
+
+def cache_load_source_units(cache_path, recache=False):
+    def convert_unit_class_to_dict():
+        units = source_read.main(info=False)
+        for unit in units:
+            def convert_unit(unit):
+                for key in unit.keys():
+                    if type(unit[key]) is source_read.AsmFile.Unit:
+                        unit[key] = unit[key].__dict__
+                    elif type(unit[key]) is dict:
+                        convert_unit(unit[key])
+                    elif key == 'pool':
+                        for i, pool in enumerate(unit['pool']):
+                            if type(pool) is dict:
+                                convert_unit(pool)
+
+            convert_unit(unit)
+        return units
+
+    if recache:
+        os.remove(cache_path)
+    source_units = cache_to_file(convert_unit_class_to_dict, cache_path)
+
+    print('source_units', len(source_units))
+    return source_units
 
 
 def cache_to_file(func, cache_path, *args, **kwargs):
@@ -538,15 +744,70 @@ class DataUnit:
         self.content = source_unit['unit']['content']
         self.size = self.compute_size()
 
+
     def compute_size(self):
         size = 0
         for line in self.content.split('\n'):
+            def get_data_tokens(line, directive):
+                line = line[line.index(directive)+len(directive):]
+                if '//' in line:
+                    line = line[:line.index('//')]
+                line.replace('\t', ' ')
+                return list(filter(lambda v: v != '', line.split(' ')))
+
+            # count number of data directive parameters
             if '.byte' in line:
-                size += len(line.split(' ')) - 1
+                size += len(get_data_tokens(line, '.byte'))
+            elif '.hword' in line:
+                size += 2 * len(get_data_tokens(line, '.hword'))
             elif '.word' in line:
-                size += 4 * (len(line.split(' ')) - 1)
+                size += 4 * len(get_data_tokens(line, '.word'))
 
         return size
+
+    @staticmethod
+    def filter_content_data_definitions(content: str) -> str:
+        new_content = []
+        for i, line in enumerate(content.split('\n')):
+            if '.byte' in line or '.word' in line or '.hword' in line:
+                if i == 0:
+                    # for first line, remove the data directive from it
+                    new_content.append(line[:line.index('.')].strip())
+                # ignore the rest of the lines
+            else:
+                new_content.append(line)
+
+        # return new content, ignoring empty lines
+        return '\n'.join(list(filter(lambda line: line.strip() != '', new_content)))
+
+    @staticmethod
+    def build_content_data_byte_definitions(content, data_buffer, byte_per_line=16):
+        # this ensures not to delete things like comments from the content
+        content = DataUnit.filter_content_data_definitions(content)
+
+        # build directives, 10 at a time
+        data_directives = '\n'
+        for count, b in enumerate(data_buffer):
+            if count % byte_per_line == 0:
+                if data_directives.endswith(', '):
+                    data_directives = data_directives[:-2]
+                if count != 0:
+                    data_directives += '\n'
+                data_directives += '\t.byte '
+            data_directives += '0x{0:X}, '.format(b)
+        if data_directives.endswith(', '):
+            data_directives = data_directives[:-2]
+
+        content += data_directives + '\n'
+
+        return content
+
+    @staticmethod
+    def build_content_incbin(content: str, lz_path: str) -> str:
+        # this ensures not to delete things like comments from the content
+        content = DataUnit.filter_content_data_definitions(content).split('\n')
+        content.insert(1, '\t.incbin "{lz_path}"'.format(**vars()))
+        return '\n'.join(content)
 
 def write_subfile(input_path, output_path, start_address, size):
     start_address &= ~0x8000000
@@ -555,6 +816,17 @@ def write_subfile(input_path, output_path, start_address, size):
         input_file.seek(start_address)
         with open(output_path, 'wb') as output_file:
             output_file.write(input_file.read(size))
+
+
+def source_relabel(old_label, new_label):
+    # update the label in the repository
+    replacep_bin = os.path.join(definitions.ROM_REPO_DIR, 'replacep.sh')
+    print('UPDATE LABEL: {0} -> {1}'.format(old_label, new_label))
+    cwd = os.getcwd()
+    os.chdir(definitions.ROM_REPO_DIR)
+    os.system('{replacep_bin} {old_label} {new_label}'.format(**vars()))
+    os.chdir(cwd)
+
 
 def edit_source_file(s_path, content, replacement):
     with open(s_path, 'r') as f:

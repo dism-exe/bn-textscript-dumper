@@ -1,35 +1,35 @@
 	text_archive_start
 
 	def_text_script TextScript0_unk0
-	.string "LanFldr$"
+	.string "LanFldr@"
 
 	def_text_script TextScript0_unk1
-	.string "ExpoFldr$"
+	.string "ExpoFldr@"
 
 	def_text_script TextScript0_unk2
-	.string "GiftFldr$"
+	.string "GiftFldr@"
 
 	def_text_script TextScript0_unk3
-	.string "ExptFldr$"
+	.string "ExptFldr@"
 
 	def_text_script TextScript0_unk4
-	.string "AprtcFld$"
+	.string "AprtcFld@"
 
 	def_text_script TextScript0_unk5
-	.string "SoulFldr$"
+	.string "SoulFldr@"
 
 	def_text_script TextScript0_unk6
-	.string "--$"
+	.string "--@"
 
 	def_text_script TextScript0_unk7
-	.string "RandFldr$"
+	.string "RandFldr@"
 
 	def_text_script TextScript0_unk8
 
 	def_text_script TextScript0_unk9
 
 	def_text_script TextScript0_unk10
-	.string "Pack$"
+	.string "Pack@"
 
 	.balign 4, 0
 0x5c

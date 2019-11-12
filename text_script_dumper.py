@@ -218,6 +218,10 @@ class TextScript:
                 # a string may contain an end_script character, even though it terminates our search
                 if byte == b'\xE6':
                     string = string + byte
+                elif is_valid_game_string_char(byte):
+                    # this means that the script has reached its end with a string character that is not E6
+                    # must be included in the string as well
+                    string = string + byte
 
                 if string != b'':
                     out.append(GameString(string))
@@ -235,8 +239,7 @@ class TextScript:
                     units.extend(strings)
                     # if a command comes right after the text in the same script, it needs to be parsed as well
                     #   read_string_lines already advanced to the command byte, so it has to be interpreted too, next iteration.
-                    # this is also true if the last byte read is at the size of the script, BUT, it hasn't been interpreted yet!
-                    if not in_script(bin_file, byte, size) or byte > b'\xE6':
+                    if byte > b'\xE6':
                         continue
             else:
                 # read current bytecode command
@@ -758,20 +761,17 @@ class GameString:
 
     @staticmethod
     def get_tbl(path):
+        # TODO: refactor to read charmap.inc
         if 'tbl' in GameString.get_tbl.__dict__.keys():
             return GameString.get_tbl.tbl
-        tbl = []
+        tbl = {}
         with open(path, 'r', encoding='utf-8') as f:
             for line in f.readlines():
                 if '=' in line:
                     lhs = line[:line.index('=')].strip()
                     rhs = line[line.index('=') + 1:].strip()
                     if rhs == '': rhs = ' '  # space would be filtered out
-                    if len(lhs) == 2:
-                        tbl.append(rhs)
-                    elif lhs == 'E400':
-                        tbl.append(' ')
-                        break
+                    tbl[int(lhs, 16)] = rhs
         for i in range(len(tbl), 0xEA):
             tbl.append('\\x%X' % i)
 
@@ -784,11 +784,16 @@ class GameString:
     @staticmethod
     def bn6f_str(byte_arr, tbl):
         out = ''
-        for byte in byte_arr:
-            # byte code
-            if byte > len(tbl):
-                break
-            if tbl[byte] == '"':
+        skip_next = False
+        for i, byte in enumerate(byte_arr):
+            if skip_next:
+                skip_next = False
+                continue
+            if byte == 0xE4:
+                short = (byte << 8) + byte_arr[i+1]
+                out = out + tbl[short]
+                skip_next = True
+            elif tbl[byte] == '"':
                 out = out + '\\"'
             else:
                 out = out + tbl[byte]

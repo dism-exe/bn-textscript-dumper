@@ -8,6 +8,8 @@ CACHE_DIR = os.path.join(ROOT_DIR, '.cache/')
 
 ROM_NAME = 'bn6f'
 ROM_REPO_DIR = os.path.join(os.environ['HOME'], 'dev', 'dis', 'bn6f')
+ROM_PATH = os.path.join(ROM_REPO_DIR, ROM_NAME + '.gba')
+BASEROM_PATH = os.path.join(ROM_REPO_DIR, 'baserom.gba')
 
 
 # for non-compressed text scripts that must have their size specified

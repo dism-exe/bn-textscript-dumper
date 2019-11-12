@@ -324,9 +324,19 @@ class ArchiveListTests(unittest.TestCase):
             for archive_ptr, archive_size in self.compressed_archives:
                 self.run_test_compressed_archive(rom_file, archive_ptr)
 
-    def test_compressed_8779B1C(self):
+    def test_comp_8779B1C_char_after_end(self):
+        # ensures that a string character after end_script is still read properly as long as it's within that script.
         with open(self.rom_path, 'rb') as rom_file:
             self.run_test_compressed_archive(rom_file, 0x779B1C)
+
+    def test_comp_877E620_e4_extended_char(self):
+        # tests for the presense of E42C, a 2-byte character
+        with open(self.rom_path, 'rb') as rom_file:
+            self.run_test_compressed_archive(rom_file, 0x77E620)
+
+    def test_comp_86D6F30(self):
+        with open(self.rom_path, 'rb') as rom_file:
+            self.run_test_compressed_archive(rom_file, 0x6D6F30)
 
     def run_test_compressed_archive(self, rom_file, archive_ptr):
         decompress_path = 'TextScript%07X.lz.bin' % (archive_ptr)

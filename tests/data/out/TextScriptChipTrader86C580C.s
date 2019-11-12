@@ -910,7 +910,7 @@
 	def_text_script TextScript0_unk64
 	.string " "
 	ts_clear_msg
-	.string " ボ$"
+	.string " ボ@"
 
 	.balign 4, 0
 0xfd6
