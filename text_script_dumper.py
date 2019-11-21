@@ -1,9 +1,8 @@
-# This will parse a textScript at the address specified, from the file specified.
-# if no file is specified, it will use the default ('../../bn6f.ign')
-# ini_file defaults to 'mmbn6.ini'
-from os import path
+import os
 import sys
 import configparser
+import definitions
+
 
 def read_custom_ini(ini_path: str) -> list:
     # type: (str) -> list(dict(str, str))
@@ -21,55 +20,9 @@ def read_custom_ini(ini_path: str) -> list:
     return sections
 
 
-def gen_macros(config_ini_path):
-    sects = read_custom_ini(config_ini_path)
-    # TODO: generate correct dynamic ts_select
-    macros = ''
-    for sect in sects:
-        if sect['section'] in ['Command', 'Extension']:
-            base = []
-            mask = []
-            for b in sect['base'].split(' '): base.append(int(b, 16))
-            for b in sect['mask'].split(' '): mask.append(int(b, 16))
-            name = 'ts_'  + sect['name']
-            # convert to snake case
-            for c in name:
-                if c.isupper():
-                    name = name.replace(c, '_%c' % c.lower())
-            # figure out how many parameters
-            params = ''
-            i = 0
-            for b in mask:
-                if b != 0xFF:
-                    params += 'p%d:req, ' % i
-                    i += 1
-            if params.endswith(', '): params = params[:-2]
-            macros += '.macro %s %s\n' % (name, params)
-            # define base bytes
-            bytes = '.byte '
-            for b in base:
-                bytes += '0x%X, ' % b
-            bytes += params.replace('p', '\p').replace(':req', '')
-            if bytes.endswith(', '): bytes = bytes[:-2]
-            macros += '\t' + bytes + '\n'
-            macros += '.endm\n'
-    return macros
-
-
-HOME_PATH = '/home/lan/dev/dis/bn_textscript_dumper/'
-config = configparser.ConfigParser()
-config.read(HOME_PATH + 'config.ini')
-
 class ModuleState:
-    # TODO fix: specify project path through envrionmental variable?
-    # if path.exists('config.ini'):
-    #     CUR_DIR = ''
-    # else:
-    #     CUR_DIR = '../'
-    PROJ_PATH = HOME_PATH + config['Paths']['DissassemblyProjectPath']
-    TBL_PATH = PROJ_PATH + config['Paths']['GameStringTblPath']
-    INI_DIR = HOME_PATH + config['Paths']['CommandDatabaseIniDirPath']
-    ROM_PATH = PROJ_PATH + config['Paths']['RomPath']
+    INI_DIR = definitions.ROOT_DIR
+    ROM_PATH = definitions.BASEROM_PATH
     LOG = True
     LOG_FILE = sys.__stdout__
     RAISE_ALL = False
@@ -95,12 +48,9 @@ class ModuleState:
     # each family carries different masking
     BITFIELD_CMDS = [b'\xfa\x00', b'\xf2']
 
-ModuleState.HOME_PATH = HOME_PATH
-ModuleState.config = config
-
 class CommandContext:
-    sects = read_custom_ini(ModuleState.INI_DIR + 'mmbn6.ini')
-    sects_s = read_custom_ini(ModuleState.INI_DIR + 'mmbn6s.ini')
+    sects = read_custom_ini(os.path.join(ModuleState.INI_DIR, 'mmbn6.ini'))
+    sects_s = read_custom_ini(os.path.join(ModuleState.INI_DIR, 'mmbn6s.ini'))
 
     def __init__(self, ini_path=None):
         if ini_path:
@@ -111,8 +61,8 @@ class CommandContext:
         :param sects: list of command dictionaries using the regular interpreter
         :param sects_s: list of command dictionaries using the secondary interpreter
         """
-        self.sects = read_custom_ini(ini_path + 'mmbn6.ini')
-        self.sects_s = read_custom_ini(ini_path + 'mmbn6s.ini')
+        self.sects = read_custom_ini(os.path.join(ini_path, 'mmbn6.ini'))
+        self.sects_s = read_custom_ini(os.path.join(ini_path, 'mmbn6s.ini'))
 
 
 def printlocals(locals, halt=False):
@@ -748,7 +698,7 @@ class TextScriptCommand:
 
 
 class GameString:
-    def __init__(self, byte_data, tbl_path=ModuleState.TBL_PATH):
+    def __init__(self, byte_data, tbl_path=definitions.GAME_STRING_TBL_PATH):
         self.data = byte_data
         self.tbl_path = tbl_path
         self.text = self.to_string()
@@ -799,6 +749,55 @@ class GameString:
                 out = out + tbl[byte]
         return out
 
+class CommandDatabase:
+    @staticmethod
+    def read_custom_ini(config_ini_path):
+        sects = read_custom_ini(config_ini_path)
+
+    class Command:
+        """
+        represents one command, and all of the relevant information about it like
+        its documentation, its parameters and their types and documentations
+        """
+        pass
+
+    class Parameter:
+        pass
+
+
+def gen_macros(config_ini_path):
+    sects = read_custom_ini(config_ini_path)
+    # TODO: generate correct dynamic ts_select
+    macros = ''
+    for sect in sects:
+        if sect['section'] in ['Command', 'Extension']:
+            base = []
+            mask = []
+            for b in sect['base'].split(' '): base.append(int(b, 16))
+            for b in sect['mask'].split(' '): mask.append(int(b, 16))
+            name = 'ts_'  + sect['name']
+            # convert to snake case
+            for c in name:
+                if c.isupper():
+                    name = name.replace(c, '_%c' % c.lower())
+            # figure out how many parameters
+            params = ''
+            i = 0
+            for b in mask:
+                if b != 0xFF:
+                    params += 'p%d:req, ' % i
+                    i += 1
+            if params.endswith(', '): params = params[:-2]
+            macros += '.macro %s %s\n' % (name, params)
+            # define base bytes
+            bytes = '.byte '
+            for b in base:
+                bytes += '0x%X, ' % b
+            bytes += params.replace('p', '\p').replace(':req', '')
+            if bytes.endswith(', '): bytes = bytes[:-2]
+            macros += '\t' + bytes + '\n'
+            macros += '.endm\n'
+    return macros
 
 if __name__ == '__main__':
     import codecs
@@ -813,6 +812,7 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--ini_dir', help='directory of command database ini files to use')
     parser.add_argument('-o', '--output', help='output file to write to')
     parser.add_argument('-s', '--size', type=auto_int, help='the size of script, if known')
+    parser.add_argument('--generate-macros', action='store_true', help='auto generates macros for the commands then exits')
     args = parser.parse_args()
 
     # in case the default encoding doesn't support utf8
@@ -830,26 +830,23 @@ if __name__ == '__main__':
             args.ini_dir = args.ini_dir + '/'
         command_context = CommandContext(args.ini_dir)
 
-    def parse_script_size(val):
-        words = val.split(' ')
-        return int(words[0], 16), int(words[1], 16)
-
     # search for if address has a known size in config ini
     if not args.size:
-        for key in ModuleState.config['ScriptSizes']:
-            address, size = parse_script_size(ModuleState.config['ScriptSizes'][key])
+        for address in definitions.SCRIPT_SIZES.keys():
+            size = definitions.SCRIPT_SIZES[address]
             if address == args.address:
                 args.size = size
-
 
     # setting additional information
     ModuleState.address = args.address
 
-    # '6C580C' # TextScriptChipTrader86C580C
-    # '6C67E4' # TextScriptLottery86C67E4
-
-    # print(args)
-
+    # generate macros instead of dumping if command is present
+    if args.generate_macros:
+        print('// mmbn6.ini')
+        print(gen_macros(os.path.join(definitions.ROOT_DIR, 'mmbn6.ini')))
+        print('// mmbn6s.ini')
+        print(gen_macros(os.path.join(definitions.ROOT_DIR, 'mmbn6s.ini')))
+        exit(0)
 
     with open(args.file, 'rb') as f:
         text_script_archive: TextScriptArchive = TextScriptArchive.read_script(command_context, args.address, f, args.size)

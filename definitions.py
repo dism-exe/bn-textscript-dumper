@@ -10,6 +10,7 @@ ROM_NAME = 'bn6f'
 ROM_REPO_DIR = os.path.join(os.environ['HOME'], 'dev', 'dis', 'bn6f')
 ROM_PATH = os.path.join(ROM_REPO_DIR, ROM_NAME + '.gba')
 BASEROM_PATH = os.path.join(ROM_REPO_DIR, 'baserom.gba')
+GAME_STRING_TBL_PATH = os.path.join(ROM_REPO_DIR, 'constants/bn6-charmap.tbl')
 
 
 # for non-compressed text scripts that must have their size specified
@@ -25,6 +26,6 @@ SCRIPT_SIZES = {
 SKIP_SCRIPTS = [
     # TextScriptJap8021D88
     0x21D88,
-    # TODO: TextScriptChipDesc1 doesn't build -- macro problem
+    # FIXME: TextScriptChipDesc1 doesn't build -- macro problem
     0x6EE0CC,
 ]
