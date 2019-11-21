@@ -19,3 +19,12 @@ SCRIPT_SIZES = {
     # TextScriptNaviCustDialog
     0x6D5708: 0xf10,
 }
+
+# scripts that are faulty in some way and require manual fixing are skipped when redumping everything
+# for compressed archives, specify the .lz filename instead.
+SKIP_SCRIPTS = [
+    # TextScriptJap8021D88
+    0x21D88,
+    # TODO: TextScriptChipDesc1 doesn't build -- macro problem
+    0x6EE0CC,
+]
