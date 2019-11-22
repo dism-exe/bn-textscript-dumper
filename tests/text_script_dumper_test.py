@@ -180,12 +180,12 @@ class CommandParsingTests(unittest.TestCase):
             self.fail('%s: could not read commad: %s %s' % (cmdName, cmd, params))
         self.assertEqual(out.cmd, cmd, '%s: invalid command read' % cmdName)
         self.assertEqual(out.params, params, '%s: invalid parameters read' % cmdName)
-        sect = TextScriptCommand.find_command_section(cmd, params, self.select_sect(out.with_interpreter_s))
+        sect = TextScriptCommand.find_command_section(cmd, params, self.select_sect(out.use_interpreter_s))
         if not sect:
             self.fail('%s: could not find commad section for %s %s' % (cmdName, cmd, params))
         self.assertEqual(sect['name'], cmdName, 'invalid command found')
         self.assertEqual(TextScriptCommand.convert_cmd_name(sect['name']),
-                          TextScriptCommand.get_cmd_macro(self.command_context, cmd, params, prioritize_s),
+                         TextScriptCommand.get_cmd_macro_name(self.command_context, cmd, params, prioritize_s),
                           '%s: failed to convert the command to the correct name' % (cmdName))
         self.assertEqual(byteStream.tell(), startAddr + out.size,
                           '%s: read additional bytes from stream' % cmdName)

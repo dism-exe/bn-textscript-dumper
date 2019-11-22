@@ -19,6 +19,77 @@ def read_custom_ini(ini_path: str) -> list:
                 sections[-1][key] = val
     return sections
 
+class CommandSectionsException(Exception): pass
+class CommandSections:
+    @staticmethod
+    def read_custom_ini_commands(config_ini_path):
+        """
+        scans for all sectors in the ini, and picks everything between two Commands or a Command and an Extension
+        as belonging to that command
+        :param config_ini_path: the path to the command database ini in question
+        :return: List of Lists of sections representing the groups belonging to a command each
+        """
+        sects = read_custom_ini(config_ini_path)
+        # TODO handle extension commands
+        commands = []
+        for sect in sects:
+            if sect['section'] == 'CommandDatabase':
+                continue
+            if sect['section'] in ['Command', 'Extension']:
+                commands.append([sect])
+            else:
+                commands[-1].append(sect)
+        return commands
+
+    @staticmethod
+    def get_parameter_offset(parameter_sect):
+        offset_s = parameter_sect['offs']
+        if '.' in offset_s:
+            byte_offset = int(offset_s[:offset_s.index('.')])
+            bit_offset = int(offset_s[offset_s.index('.')+1:])
+            return byte_offset, bit_offset
+        else:
+            return int(offset_s), 0
+
+    @staticmethod
+    def get_parameter_name(parameter_sect):
+        if 'name' not in parameter_sect and parameter_sect['section'] == 'Length':
+            return 'length'
+        else:
+            return parameter_sect['name']
+
+    @staticmethod
+    def get_ordered_parameters(command_sects):
+        """
+
+        :param commands_sects: list of a command section and related sections.
+        :return: a list of the parameters, ordered by their offset location.
+        """
+        params = filter(lambda s: s['section'] in ['Parameter', 'Length'] and 'offs' in s, command_sects)
+
+        def sort_by_offset(param_sect):
+            byte_off, bit_off = CommandSections.get_parameter_offset(param_sect)
+            return byte_off * 10 + bit_off
+
+        params = sorted(params, key=lambda s: sort_by_offset(s))
+        return params
+# if __name__ == '__main__':
+#     commands_sects = CommandSections.read_custom_ini_commands(os.path.join(definitions.ROOT_DIR, 'mmbn6.ini'))
+#     out = None
+#     for command_sects in commands_sects:
+#        if command_sects[0]['name'] == 'option':
+#             out = CommandSections.get_ordered_parameters(command_sects)
+#     exit(0)
+
+    @staticmethod
+    def has_bitfield_param(command_sects):
+        for sect in filter(lambda s: 'offs' in s, command_sects):
+            byte_off, bit_off = CommandSections.get_parameter_offset(sect)
+            if bit_off != 0:
+                return True
+        return False
+
+
 
 class ModuleState:
     INI_DIR = definitions.ROOT_DIR
@@ -51,6 +122,8 @@ class ModuleState:
 class CommandContext:
     sects = read_custom_ini(os.path.join(ModuleState.INI_DIR, 'mmbn6.ini'))
     sects_s = read_custom_ini(os.path.join(ModuleState.INI_DIR, 'mmbn6s.ini'))
+    commands_sects = CommandSections.read_custom_ini_commands(os.path.join(ModuleState.INI_DIR, 'mmbn6.ini'))
+    commands_sects_s = CommandSections.read_custom_ini_commands(os.path.join(ModuleState.INI_DIR, 'mmbn6s.ini'))
 
     def __init__(self, ini_path=None):
         if ini_path:
@@ -63,6 +136,8 @@ class CommandContext:
         """
         self.sects = read_custom_ini(os.path.join(ini_path, 'mmbn6.ini'))
         self.sects_s = read_custom_ini(os.path.join(ini_path, 'mmbn6s.ini'))
+        self.commands_sects = CommandSections.read_custom_ini_commands(os.path.join(ini_path, 'mmbn6.ini'))
+        self.commands_sects_s = CommandSections.read_custom_ini_commands(os.path.join(ini_path, 'mmbn6s.ini'))
 
 
 def printlocals(locals, halt=False):
@@ -221,26 +296,14 @@ class TextScript:
             if type(unit) is GameString:
                 if len(unit.data) == 1 and unit.data[0] == 0xE6:
                     # for empty scripts, we just put the end script command instead of representing it as an empty string
-                    s = TextScriptCommand.get_cmd_macro(self.command_context, unit.data, b'', False)
+                    s = TextScriptCommand.get_cmd_macro_name(self.command_context, unit.data, b'', False)
                 else:
                     s = '.string "%s"' % unit.to_string()
                 if s == '':
                     raise TextScriptException('invalid string output for %s' % unit)
                 out += '\t' + s + '\n'
             elif type(unit) is TextScriptCommand:
-                name = unit.macro
-                s = '%s ' % name
-                for i in range(len(unit.params)):
-                    # jump commands go to a linked script
-                    if 'jump' in name.lower() and i == 0:
-                        s += '%d, ' % unit.params[i]
-                    else:
-                        s += '0x%X, ' % unit.params[i]
-                if unit.params: s = s[:-2]
-                s = s.rstrip()
-                if s == '':
-                    raise TextScriptException('invalid string output for %s' % unit)
-                out += '\t' + s + '\n'
+                out += TextScriptCommand.build_cmd_macro(self.command_context, unit.cmd, unit.params, unit.use_interpreter_s)
             else:
                 raise TextScriptException('invalid unit type')
 
@@ -431,23 +494,27 @@ class TextScriptCommand:
         """
         self.cmd = cmd
         self.params = params
-        self.with_interpreter_s = with_interpreter_s
+        self.use_interpreter_s = with_interpreter_s
         self.macro = macro
         self.size = self.get_cmd_len(cmd, params, with_interpreter_s)
 
     def serialize(self):
-        if self.cmd[0:2] == b'\xfa\x00':
+        return TextScriptCommand.to_bytes(self.cmd, self.params, self.use_interpreter_s)
+
+    @staticmethod
+    def to_bytes(cmd, params, using_interpreter_s):
+        if cmd[0:2] == b'\xfa\x00':
             # have to put the params back into the command
-            cmd_bytes = list(self.cmd)
-            param_bytes = list(self.params)
-            cmd_bytes[2] |= param_bytes[0] << 4
-            cmd_bytes[2] |= param_bytes[1] >> 4
+            cmd_bytes = list(cmd)
+            param_bytes = list(params)
+            cmd_bytes[2] |= param_bytes[0]
             cmd_bytes[3] |= (param_bytes[1] & 0xF) << 4
             compiled_cmd = bytes(cmd_bytes)
         else:
-            compiled_cmd = bytes(self.cmd) + bytes(self.params)
+            compiled_cmd = bytes(cmd) + bytes(params)
 
-        if len(compiled_cmd) != self.size:
+        size = TextScriptCommand.get_cmd_len(cmd, params, using_interpreter_s)
+        if len(compiled_cmd) != size:
             raise TextScriptException(
                 'compiling command failed due to its length not matching: %s' % (compiled_cmd))
         return compiled_cmd
@@ -479,7 +546,7 @@ class TextScriptCommand:
         # FIXME refactor this boolean inconsistency with which interpreter to use...
         use_second_interpreter = not use_first_interpreter
         return TextScriptCommand(out[0], out[1], use_second_interpreter,
-                                 TextScriptCommand.get_cmd_macro(command_context, out[0], out[1], use_second_interpreter))
+                                 TextScriptCommand.get_cmd_macro_name(command_context, out[0], out[1], use_second_interpreter))
 
 
     @staticmethod
@@ -573,7 +640,7 @@ class TextScriptCommand:
             return len(cmd) + len(params)
 
     @staticmethod
-    def get_cmd_macro(command_context: CommandContext, cmd: bytes, params: bytes, prioritize_s: bool) -> str:
+    def get_cmd_macro_name(command_context: CommandContext, cmd: bytes, params: bytes, prioritize_s: bool) -> str:
         """
         gets the command macro given a full description of the command (all bytes involving the set mask)
         :param command_context: Contains necessary information about commands, including the database sections for both interpreters
@@ -588,6 +655,7 @@ class TextScriptCommand:
             error(InvalidTextScriptCommandException,
                   'could not find command %s %s' % (str(cmd), str(params)),
                   critical=False)
+
         name = TextScriptCommand.convert_cmd_name(sect['name']) # converts to snake case and add ts_
         if not name:
             error(InvalidTextScriptCommandException,
@@ -599,7 +667,102 @@ class TextScriptCommand:
             if name.endswith(', '):
                 name = name[:-2]
             name += ' // ***ERROR***'
+
         return name.strip()
+
+    @staticmethod
+    def build_cmd_macro(command_context: CommandContext, cmd: bytes, params: bytes, use_secondary_interpreter: bool) -> str:
+        out = ''
+
+        # find the command section
+        select_sects = lambda select: [command_context.sects, command_context.sects_s][select]
+        sect = TextScriptCommand.find_command_section(cmd, params, select_sects(use_secondary_interpreter))
+        if not sect and use_secondary_interpreter:
+            sect = TextScriptCommand.find_command_section(cmd, params, select_sects(not use_secondary_interpreter))
+        if not sect:
+            raise InvalidTextScriptCommandException('could not find command %s %s' % (str(cmd), str(params)))
+
+        name = TextScriptCommand.convert_cmd_name(sect['name']) # converts to snake case and add ts_
+        if not name:
+            raise InvalidTextScriptCommandException('no name exists for the cmd ' + str(cmd) + ' ' + str(params))
+        name = name.strip()
+
+        # search for it to retrieve parameters
+        command_sect_and_params = None
+        if use_secondary_interpreter:
+            # search both since secondary interpreter uses commands from first
+            all_commands_sects = command_context.commands_sects.copy()
+            all_commands_sects.extend(command_context.commands_sects_s)
+            for command_sects in all_commands_sects:
+                if command_sects[0] == sect:
+                    command_sect_and_params = command_sects
+        else:
+            for command_sects in command_context.commands_sects:
+                if command_sects[0] == sect:
+                    command_sect_and_params = command_sects
+        if command_sect_and_params is None:
+            raise InvalidTextScriptCommandException('could not find command and param sections for {0}'.format(sect['name']))
+        command_sects = command_sect_and_params
+
+        # build parameters
+        command_bytes = TextScriptCommand.to_bytes(cmd, params, use_secondary_interpreter)
+        s = '%s ' % name
+
+        if cmd in ModuleState.DYNAMIC_CMDS:
+            # TODO: just parse dynamic command as non-keyworded args for now
+            s = '%s ' % name
+            for i in range(len(params)):
+                # jump commands go to a linked script
+                if 'jump' in name.lower() and i == 0:
+                    s += '%d, ' % params[i]
+                else:
+                    s += '0x%X, ' % params[i]
+            if params: s = s[:-2]
+            s = s.rstrip()
+            if s == '':
+                raise TextScriptException('invalid string output for %s' % cmd)
+            out += '\t' + s + '\n'
+        else:
+            # using keyworded args
+            if len(params) != 0:
+                s += '[\n'
+
+            last_param_byte_off = 0 # used to include potential dynamic data after last "parameter" argument
+            for param_sect in CommandSections.get_ordered_parameters(command_sects):
+                byte_off, bit_off = CommandSections.get_parameter_offset(param_sect)
+                last_param_byte_off = byte_off
+                field_bit_size = int(param_sect['bits'])
+
+                # compute parameter value based on its offset and size
+                # print(byte_off, bit_off, field_bit_size)
+                val_bytes = command_bytes[byte_off:byte_off + max((field_bit_size // 8), 1)]
+                val = 0
+                for digit, b in enumerate(val_bytes):
+                    val |= (b << (8*digit))
+                val >>= bit_off
+                val &= 2**field_bit_size - 1 # mask by the size, 4 bits would mask 0x0F
+
+
+                param_name = CommandSections.get_parameter_name(param_sect)
+                s += '\t\t{name}: '.format(name=param_name)
+
+                # jump commands go to a linked script
+                if 'jump' in name.lower() and param_name == 'target':
+                    s += '%d,\n' % val
+                else:
+                    s += '0x%X,\n' % val
+
+            if s.endswith(', \n'):
+                s = s[:-3] + '\n'
+            if len(params) != 0:
+                s += '\t]'
+
+            s = s.rstrip()
+            if s == '':
+                raise TextScriptException('invalid string output for %s' % unit)
+            out += '\t' + s + '\n'
+        return out
+
 
     @staticmethod
     def read_cmd_from_sects(bin_file, cmd: bytes, sects: list) -> (bytes, bytes) or None:
@@ -638,8 +801,8 @@ class TextScriptCommand:
             # bitfield commands, prints
             elif num_params == 1.5:
                 # params are already part of the command
-                # pattern: FF FF ... FF 00 0F
-                params = bytes([cmd[2] >> 4, ((cmd[2]<<4)&0xFF)|(cmd[3]>>4)])  # X0 0, 0X X
+                # pattern: FF FF 00 0F
+                params = bytes([cmd[2], (cmd[3] >> 4)])  # XX YF
                 cmd = bytes([cmd[0], cmd[1], 0x00, cmd[3]&0xF])
             # parse cmd and params
             elif num_params >= 0:
@@ -725,7 +888,7 @@ class GameString:
         for i in range(len(tbl), 0xEA):
             tbl.append('\\x%X' % i)
 
-        tbl[0xE6] = '$' # for shortness, represent the end of script as a '$' in strings
+        tbl[0xE6] = '@' # for shortness, represent the end of script as a '$' in strings
         tbl[0xE9] = '\\n'
         GameString.get_tbl.tbl = tbl
 
@@ -749,55 +912,115 @@ class GameString:
                 out = out + tbl[byte]
         return out
 
-class CommandDatabase:
-    @staticmethod
-    def read_custom_ini(config_ini_path):
-        sects = read_custom_ini(config_ini_path)
-
-    class Command:
-        """
-        represents one command, and all of the relevant information about it like
-        its documentation, its parameters and their types and documentations
-        """
-        pass
-
-    class Parameter:
-        pass
 
 
 def gen_macros(config_ini_path):
-    sects = read_custom_ini(config_ini_path)
+    def build_command_documentation(command_sects):
+        out = ''
+
+        # document the command
+        if 'desc' in command_sects[0]:
+            out += '// {0}\n'.format(command_sects[0]['desc'])
+
+        def get_param_doc(sect):
+            if 'offs' in sect:
+                offset = CommandSections.get_parameter_offset(sect)
+            else:
+                offset = None
+
+            if 'name' in sect:
+                name = sect['name']
+            elif sect['section'] == 'Length':
+                name = 'length'
+            else:
+                raise CommandSectionsException('parameter does not have a name: ' + sect['section'])
+
+            if 'desc' in sect:
+                return '// :param {0}[{1}:{2}:{3}]: {4}\n'.format(name, offset[0], offset[1], sect['bits'], sect['desc'])
+            else:
+                return '// :param {0}[{1}:{2}:{3}]:\n'.format(name, offset[0], offset[1], sect['bits'])
+
+            return ''
+
+        for sect in CommandSections.get_ordered_parameters(command_sects):
+            out += get_param_doc(sect)
+        for sect in filter(lambda sect: 'name' in sect and sect['name'] == 'Data', command_sects):
+            out += get_param_doc(sect)
+
+        return out.strip()
+
+
+    def build_byte_parameters(mask, base):
+        params = ''
+        i = 0
+        for b in mask:
+            if b != 0xFF:
+                params += 'p%d:req, ' % i
+                i += 1
+        if params.endswith(', '): params = params[:-2]
+
+        # build macro implementation: .byte <base> <param_bytes>
+        impl = '.byte '
+        for b in base:
+            impl += '0x%X, ' % b
+        impl += params.replace('p', '\p').replace(':req', '')
+        if impl.endswith(', '): impl = impl[:-2]
+        return params, impl
+
+    def build_named_parameters(command_sects):
+        param_defs = ''
+        params = ''
+
+        for param_sect in CommandSections.get_ordered_parameters(command_sects):
+            if 'name' not in param_sect and param_sect['section'] == 'Length':
+                name = 'length'
+            else:
+                name = param_sect['name']
+            param_defs += '{0}:req, '.format(name)
+            params += '\\{0}, '.format(name)
+        if param_defs.endswith(', '): param_defs = param_defs[:-2]
+        if params.endswith(', '): params = params[:-2]
+
+        # build macro implementation: .byte <base>
+        impl = '.byte '
+        for b in base:
+            impl += '0x%X, ' % b
+
+        # TODO WIP assuming no bitfield parameters, and no dynamic parameters
+
+        impl += params
+        if impl.endswith(', '): impl = impl[:-2]
+
+        # group parameters by byte
+
+
+
+        return param_defs, impl
+
+    commands_sects = CommandSections.read_custom_ini_commands(config_ini_path)
     # TODO: generate correct dynamic ts_select
     macros = ''
-    for sect in sects:
-        if sect['section'] in ['Command', 'Extension']:
+
+    for command_sects in commands_sects:
+        command = command_sects[0]
+        if command['section'] in ['Command', 'Extension']:
             base = []
             mask = []
-            for b in sect['base'].split(' '): base.append(int(b, 16))
-            for b in sect['mask'].split(' '): mask.append(int(b, 16))
-            name = 'ts_'  + sect['name']
-            # convert to snake case
+            for b in command['base'].split(' '): base.append(int(b, 16))
+            for b in command['mask'].split(' '): mask.append(int(b, 16))
+
+            # convert name to snake case
+            name = 'ts_'  + command['name']
             for c in name:
                 if c.isupper():
                     name = name.replace(c, '_%c' % c.lower())
-            # figure out how many parameters
-            params = ''
-            i = 0
-            for b in mask:
-                if b != 0xFF:
-                    params += 'p%d:req, ' % i
-                    i += 1
-            if params.endswith(', '): params = params[:-2]
-            macros += '.macro %s %s\n' % (name, params)
-            # define base bytes
-            bytes = '.byte '
-            for b in base:
-                bytes += '0x%X, ' % b
-            bytes += params.replace('p', '\p').replace(':req', '')
-            if bytes.endswith(', '): bytes = bytes[:-2]
-            macros += '\t' + bytes + '\n'
-            macros += '.endm\n'
-    return macros
+
+            # build parameters
+            params, impl = build_named_parameters(command_sects)
+
+            macros += '{desc}\n.macro {name} {params}\n\t{impl}\n.endm\n\n'.format(desc=build_command_documentation(command_sects), **vars())
+
+    return '\t' + macros.replace('\n', '\n\t')
 
 if __name__ == '__main__':
     import codecs
