@@ -1,4 +1,5 @@
 import os
+import sys
 
 # path to this project
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -8,10 +9,12 @@ CACHE_DIR = os.path.join(ROOT_DIR, '.cache/')
 
 ROM_NAME = 'bn6f'
 ROM_REPO_DIR = os.path.join(os.environ['HOME'], 'dev', 'dis', 'bn6f')
+ROM_REPO_TOOLS_DIR = os.path.join(os.environ['HOME'], 'dev', 'dis', 'bn6f-tools', 'tools') # TODO: update to bn6f/tools when stable
 ROM_PATH = os.path.join(ROM_REPO_DIR, ROM_NAME + '.gba')
 BASEROM_PATH = os.path.join(ROM_REPO_DIR, 'baserom.gba')
 GAME_STRING_TBL_PATH = os.path.join(ROM_REPO_DIR, 'constants/bn6-charmap.tbl')
 
+sys.path.insert(0, ROM_REPO_TOOLS_DIR)
 
 # for non-compressed text scripts that must have their size specified
 SCRIPT_SIZES = {

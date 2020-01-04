@@ -291,7 +291,7 @@ class ArchiveListTests(unittest.TestCase):
 
     def setUp(self) -> None:
         self.archive_path = os.environ['HOME'] + '/dev/dis/downloads/MMBNTextDumps/tpl/mmbn6cf-us.tpl' # FIXME: Hard path
-        self.rom_path = os.path.join(definitions.ROM_REPO_DIR, 'bn6f.gba')
+        self.rom_path = os.path.join(definitions.ROM_REPO_DIR, 'baserom.gba')
 
         archives = text_script_scanner.process_archives(self.archive_path)
         compressed_archives, regular_archives = text_script_scanner.cache_separate_archives_based_on_compression(self.archive_path, self.rom_path, archives)
@@ -324,6 +324,10 @@ class ArchiveListTests(unittest.TestCase):
             for archive_ptr, archive_size in self.compressed_archives:
                 self.run_test_compressed_archive(rom_file, archive_ptr)
 
+    def test_comp_879DA74_ts_jump_random(self):
+        with open(self.rom_path, 'rb') as rom_file:
+            self.run_test_compressed_archive(rom_file, 0x79DA74)
+
     def test_comp_8779B1C_char_after_end(self):
         # ensures that a string character after end_script is still read properly as long as it's within that script.
         with open(self.rom_path, 'rb') as rom_file:
@@ -338,6 +342,66 @@ class ArchiveListTests(unittest.TestCase):
         with open(self.rom_path, 'rb') as rom_file:
             self.run_test_compressed_archive(rom_file, 0x6D6F30)
 
+    def assert_archive_binary_matches(self, text_script_archive: TextScriptArchive, bin_file):
+
+        def unit_to_bytes(unit):
+            if type(unit) is GameString:
+                return unit.data
+            elif type(unit) is TextScriptCommand:
+                return unit.serialize()
+            else:
+                raise Exception('invalid enumeration state')
+
+        def get_unit_content(unit):
+            if type(unit) is GameString:
+                return unit.text
+            elif type(unit) is TextScriptCommand:
+                return unit.macro
+            else:
+                raise Exception('invalid enumeration state')
+
+        def window_contained_in_stream(buf, f):
+            window = f.read(len(buf))
+            while f:
+                if window == buf:
+                    return True
+                window = window[1:] + f.read(1)
+            return False
+
+
+
+        rel_pointers = text_script_archive.serialize_rel_pointers()
+
+        # sync commands regardless of rel_pointers size, as they don't provide good diagnostic
+        # first_unit = text_script_archive.text_scripts[0].units3[0]
+        # if not window_contained_in_stream(unit_to_bytes(first_unit), bin_file):
+        #     raise Exception('could not sync to first command')
+        # rewind back to the beginning of the commando
+
+        TextScriptArchive.read_relative_pointers(bin_file, 0)
+
+
+
+        for script_idx, text_script in enumerate(text_script_archive.text_scripts):
+            for unit in text_script.units:
+                address = bin_file.tell()
+                if type(unit) is GameString:
+                    content = unit.text
+                    self.assertEqual(bin_file.read(len(unit.data)), unit.data,
+                                     'mismatch in script {script_idx} at address 0x{address:X}: {content}'.format(
+                                         **vars()))
+                if type(unit) is TextScriptCommand:
+                    content = unit.macro
+                    unit_data = unit.serialize()
+                    self.assertEqual(bin_file.read(len(unit_data)), unit_data,
+                                     'mismatch in script {script_idx} at address 0x{address:X}: {content}'.format(
+                                         **vars()))
+                    address += len(unit_data)
+
+        self.assertEqual(rel_pointers, bin_file.read(len(rel_pointers)),
+                         'rel. pointers mismatch')
+
+
     def run_test_compressed_archive(self, rom_file, archive_ptr):
         decompress_path = 'TextScript%07X.lz.bin' % (archive_ptr)
         text_script_scanner.gbagfx_decompress_at(rom_file, archive_ptr, decompress_path)
@@ -346,29 +410,24 @@ class ArchiveListTests(unittest.TestCase):
             try:
                 textscript_archive = uut_dumper.TextScriptArchive.read_script(uut_dumper.CommandContext(), 4, decompressed_file, size)
 
-                # test matching
-                def assert_archive_binary_matches(text_script_archive: TextScriptArchive, bin_file):
-                    rel_pointers = text_script_archive.serialize_rel_pointers()
-                    self.assertEqual(rel_pointers, bin_file.read(len(rel_pointers)),
-                                     'rel. pointers mismatch')
-
-                    for script_idx, text_script in enumerate(text_script_archive.text_scripts):
-                        for unit in text_script.units:
-                            address = bin_file.tell()
-                            if type(unit) is GameString:
-                                content = unit.text
-                                self.assertEqual(bin_file.read(len(unit.data)), unit.data,
-                                                 'mismatch in script {script_idx} at address 0x{address:X}: {content}'.format(**vars()))
-                            if type(unit) is TextScriptCommand:
-                                content = unit.macro
-                                unit_data = unit.serialize()
-                                self.assertEqual(bin_file.read(len(unit_data)), unit_data,
-                                                'mismatch in script {script_idx} at address 0x{address:X}: {content}'.format(**vars()))
-                                address += len(unit_data)
-
                 decompressed_file.seek(4)
-                assert_archive_binary_matches(textscript_archive, decompressed_file)
+                self.assert_archive_binary_matches(textscript_archive, decompressed_file)
 
+                # check for a *.bin in the repository that has the address on it
+                for root, dirs, files in os.walk(definitions.ROM_REPO_DIR):
+                    if 'backup_lz' in root:
+                        continue
+                    for filename in files:
+                        if not filename.endswith('.s.bin'):
+                            continue
+                        path = os.path.join(root, filename)
+                        if '{:07X}'.format(archive_ptr | 0x8000000) in path and path.endswith('.s.bin'):
+                            with open(path, 'rb') as build_file:
+                                self.assert_archive_binary_matches(textscript_archive, build_file)
+
+                build = textscript_archive.build()
+
+            # always make sure to delete the file, as we create it during the test
             finally:
                 os.remove(decompress_path)
 

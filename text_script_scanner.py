@@ -6,8 +6,7 @@ import text_script_dumper as dumper
 import definitions
 from common import info
 
-sys.path.append(os.path.join(definitions.ROM_REPO_DIR, 'tools'))
-import edit_source.source_read as source_read
+from edit_source import source_read
 
 class TextScriptScannerException(Exception): pass
 
@@ -900,10 +899,13 @@ def gbagfx_decompress_at(rom_file, compressed_data_address: int, output_path: st
         slice_file.write(rom_file.read())
 
     # decompress file
-    status = os.system('{gbagfx_bin} {slice_file_path} {output_path} 2> /dev/null'.format(**vars()))
+    # status = os.system('{gbagfx_bin} {slice_file_path} {output_path} 2> /dev/null'.format(**vars()))
+    status = os.system('{gbagfx_bin} {slice_file_path} {output_path}'.format(**vars()))
+
+    if status != 0:
+        raise IOError('error: failed to decompress compressed archive {:07X}'.format(compressed_data_address))
 
     os.remove(slice_file_path)
-    return status
 
 
 def gbagfx_decompress(lz_path: str, output_bin_path: str):

@@ -674,7 +674,7 @@ class TextScriptCommand:
     def build_cmd_macro(command_context: CommandContext, cmd: bytes, params: bytes, use_secondary_interpreter: bool) -> str:
         out = ''
 
-        # find the command section
+        # find the command section -- accounts for the fact that the secondary interpreter uses the first as default
         select_sects = lambda select: [command_context.sects, command_context.sects_s][select]
         sect = TextScriptCommand.find_command_section(cmd, params, select_sects(use_secondary_interpreter))
         if not sect and use_secondary_interpreter:
@@ -682,7 +682,8 @@ class TextScriptCommand:
         if not sect:
             raise InvalidTextScriptCommandException('could not find command %s %s' % (str(cmd), str(params)))
 
-        name = TextScriptCommand.convert_cmd_name(sect['name']) # converts to snake case and add ts_
+        # convert the name to use snake case and prepend with ts_
+        name = TextScriptCommand.convert_cmd_name(sect['name'])
         if not name:
             raise InvalidTextScriptCommandException('no name exists for the cmd ' + str(cmd) + ' ' + str(params))
         name = name.strip()
@@ -714,7 +715,7 @@ class TextScriptCommand:
             for i in range(len(params)):
                 # jump commands go to a linked script
                 if 'jump' in name.lower() and i == 0:
-                    s += '%d, ' % params[i]
+                    s += '{}, '.format(TextScriptCommand._build_jump_id(params[i]))
                 else:
                     s += '0x%X, ' % params[i]
             if params: s = s[:-2]
@@ -724,11 +725,14 @@ class TextScriptCommand:
             out += '\t' + s + '\n'
         else:
             # using keyworded args
-            if len(params) != 0:
+            param_sects = CommandSections.get_ordered_parameters(command_sects)
+
+            # if more than one argument, start multiline arguments
+            if len(param_sects) > 1:
                 s += '[\n'
 
             last_param_byte_off = 0 # used to include potential dynamic data after last "parameter" argument
-            for param_sect in CommandSections.get_ordered_parameters(command_sects):
+            for param_sect in param_sects:
                 byte_off, bit_off = CommandSections.get_parameter_offset(param_sect)
                 last_param_byte_off = byte_off
                 field_bit_size = int(param_sect['bits'])
@@ -744,17 +748,25 @@ class TextScriptCommand:
 
 
                 param_name = CommandSections.get_parameter_name(param_sect)
-                s += '\t\t{name}: '.format(name=param_name)
+                if len(param_sects) > 1:
+                    s += '\t\t{name}: '.format(name=param_name)
+                else:
+                    s += '{name}='.format(name=param_name)
 
                 # jump commands go to a linked script
-                if 'jump' in name.lower() and param_name == 'target':
-                    s += '%d,\n' % val
+                if 'jump' in param_name.lower() or param_name == 'target':
+                    s += '{},'.format(TextScriptCommand._build_jump_id(val))
                 else:
-                    s += '0x%X,\n' % val
+                    s += '0x%X,' % val
 
-            if s.endswith(', \n'):
-                s = s[:-3] + '\n'
-            if len(params) != 0:
+                # if more than one argument, multi-line
+                if len(param_sects) > 1:
+                    s += '\n'
+
+            if s.endswith(','):
+                s = s[:-1]
+
+            if len(param_sects) > 1:
                 s += '\t]'
 
             s = s.rstrip()
@@ -763,6 +775,16 @@ class TextScriptCommand:
             out += '\t' + s + '\n'
         return out
 
+    @staticmethod
+    def _build_jump_id(textscript_id):
+        """
+        in case of jumping to some textscript, this builds the format to refer to it
+        0xFF is reserved for TS_CONTINUE, as it doesn't jump anywhere
+        :param textscript_id: the textscript relative pointer id
+        """
+        if textscript_id == 0xFF:
+            return 'TS_CONTINUE'
+        return 'TextScript{addr}_unk{id}_id'.format(addr=ModuleState.address, id=textscript_id)
 
     @staticmethod
     def read_cmd_from_sects(bin_file, cmd: bytes, sects: list) -> (bytes, bytes) or None:
