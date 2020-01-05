@@ -328,6 +328,27 @@ class ArchiveListTests(unittest.TestCase):
         with open(self.rom_path, 'rb') as rom_file:
             self.run_test_compressed_archive(rom_file, 0x79DA74)
 
+    def test_comp_mult(self):
+        with open(self.rom_path, 'rb') as rom_file:
+            # ts_print_folder_name: would error if expecting an entry of 4-bit
+            # self.run_test_compressed_archive(rom_file, 0x6D0614)
+
+            # self.run_test_compressed_archive(rom_file, 0x738B24)
+            # self.run_test_compressed_archive(rom_file, 0x73A528)
+            # self.run_test_compressed_archive(rom_file, 0x73C5A4)
+            # self.run_test_compressed_archive(rom_file, 0x782FEC)
+            # self.run_test_compressed_archive(rom_file, 0x784908)
+            # self.run_test_compressed_archive(rom_file, 0x785FF4)
+            # self.run_test_compressed_archive(rom_file, 0x787C6C)
+            # self.run_test_compressed_archive(rom_file, 0x789A10)
+            # self.run_test_compressed_archive(rom_file, 0x78B690)
+            # self.run_test_compressed_archive(rom_file, 0x78D038)
+            # self.run_test_compressed_archive(rom_file, 0x79073C)
+            # self.run_test_compressed_archive(rom_file, 0x7913C8)
+            self.run_test_compressed_archive(rom_file, 0x791878)
+            self.run_test_compressed_archive(rom_file, 0x792478)
+
+
     def test_comp_8779B1C_char_after_end(self):
         # ensures that a string character after end_script is still read properly as long as it's within that script.
         with open(self.rom_path, 'rb') as rom_file:
@@ -342,45 +363,46 @@ class ArchiveListTests(unittest.TestCase):
         with open(self.rom_path, 'rb') as rom_file:
             self.run_test_compressed_archive(rom_file, 0x6D6F30)
 
-    def assert_archive_binary_matches(self, text_script_archive: TextScriptArchive, bin_file):
 
-        def unit_to_bytes(unit):
-            if type(unit) is GameString:
-                return unit.data
-            elif type(unit) is TextScriptCommand:
-                return unit.serialize()
-            else:
-                raise Exception('invalid enumeration state')
+    def assert_text_script_archive_equals(self, exp_archive: TextScriptArchive, act_archive: TextScriptArchive):
+        self.assertEqual(len(exp_archive.text_scripts), len(act_archive.text_scripts))
+
+        def bytes_to_hex_list(data: bytes):
+            out = iter(data)
+            out = map(lambda b: hex(b), out)
+            out = list(out)
+            return out
 
         def get_unit_content(unit):
             if type(unit) is GameString:
                 return unit.text
             elif type(unit) is TextScriptCommand:
-                return unit.macro
+                return '{} ({}: {}): {}'.format(unit.macro, bytes_to_hex_list(unit.cmd), bytes_to_hex_list(unit.params),
+                                                      TextScriptCommand.build_cmd_macro(uut_dumper.CommandContext(), unit.cmd, unit.params, unit.use_interpreter_s).strip())
             else:
                 raise Exception('invalid enumeration state')
 
-        def window_contained_in_stream(buf, f):
-            window = f.read(len(buf))
-            while f:
-                if window == buf:
-                    return True
-                window = window[1:] + f.read(1)
-            return False
 
+        for script_idx, (exp_text_script, act_text_script) in enumerate(zip(exp_archive.text_scripts, act_archive.text_scripts)):
+            for exp_unit, act_unit in zip(exp_text_script.units, act_text_script.units):
+                self.assertEqual(type(exp_unit), type(act_unit),
+                                 'non-matching types in script {script_idx} for: {exp_content}'
+                                 .format(**vars(), exp_content=get_unit_content(exp_unit)))
+                if type(exp_unit) is GameString:
+                    self.assertEqual(exp_unit.text, act_unit.text,
+                                     'non-matching string in script {script_idx} for: {exp_content}'
+                                     .format(**vars(), exp_content=get_unit_content(exp_unit)))
+                if type(exp_unit) is TextScriptCommand:
+                    self.assertEqual(bytes_to_hex_list(exp_unit.serialize()), bytes_to_hex_list(act_unit.serialize()),
+                                     'non-matching command in script {script_idx} for: {exp_content}'
+                                     .format(**vars(), exp_content=get_unit_content(exp_unit)))
 
-
-        rel_pointers = text_script_archive.serialize_rel_pointers()
-
+    def assert_archive_binary_matches(self, text_script_archive: TextScriptArchive, bin_file):
         # sync commands regardless of rel_pointers size, as they don't provide good diagnostic
-        # first_unit = text_script_archive.text_scripts[0].units3[0]
-        # if not window_contained_in_stream(unit_to_bytes(first_unit), bin_file):
-        #     raise Exception('could not sync to first command')
-        # rewind back to the beginning of the commando
-
-        TextScriptArchive.read_relative_pointers(bin_file, 0)
-
-
+        rel_pointers = text_script_archive.serialize_rel_pointers()
+        bin_file.read(len(rel_pointers))
+        # self.assertEqual(rel_pointers, bin_file.read(len(rel_pointers)),
+        #                  'rel. pointers mismatch')
 
         for script_idx, text_script in enumerate(text_script_archive.text_scripts):
             for unit in text_script.units:
@@ -398,9 +420,6 @@ class ArchiveListTests(unittest.TestCase):
                                          **vars()))
                     address += len(unit_data)
 
-        self.assertEqual(rel_pointers, bin_file.read(len(rel_pointers)),
-                         'rel. pointers mismatch')
-
 
     def run_test_compressed_archive(self, rom_file, archive_ptr):
         decompress_path = 'TextScript%07X.lz.bin' % (archive_ptr)
@@ -415,17 +434,18 @@ class ArchiveListTests(unittest.TestCase):
 
                 # check for a *.bin in the repository that has the address on it
                 for root, dirs, files in os.walk(definitions.ROM_REPO_DIR):
+                    # filter out backup archives, they're guaranteed correct
                     if 'backup_lz' in root:
                         continue
-                    for filename in files:
-                        if not filename.endswith('.s.bin'):
-                            continue
+                    for filename in filter(lambda f: f.endswith('.s.bin'), iter(files)):
                         path = os.path.join(root, filename)
-                        if '{:07X}'.format(archive_ptr | 0x8000000) in path and path.endswith('.s.bin'):
-                            with open(path, 'rb') as build_file:
-                                self.assert_archive_binary_matches(textscript_archive, build_file)
 
-                build = textscript_archive.build()
+                        if '{:07X}'.format(archive_ptr | 0x8000000) in path:
+                            with open(path, 'rb') as build_file:
+                                print('{}: testing against build'.format(path))
+                                build_textscript_archive = uut_dumper.TextScriptArchive.read_script(uut_dumper.CommandContext(), 4, build_file, size)
+                                self.assert_text_script_archive_equals(textscript_archive, build_textscript_archive)
+                                self.assert_archive_binary_matches(textscript_archive, build_file)
 
             # always make sure to delete the file, as we create it during the test
             finally:

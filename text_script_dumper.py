@@ -504,7 +504,7 @@ class TextScriptCommand:
     @staticmethod
     def to_bytes(cmd, params, using_interpreter_s):
         if cmd[0:2] == b'\xfa\x00':
-            # have to put the params back into the command
+            # print bitfield commands -- have to put the params back into the command
             cmd_bytes = list(cmd)
             param_bytes = list(params)
             cmd_bytes[2] |= param_bytes[0]
@@ -714,10 +714,10 @@ class TextScriptCommand:
             s = '%s ' % name
             for i in range(len(params)):
                 # jump commands go to a linked script
-                if 'jump' in name.lower() and i == 0:
-                    s += '{}, '.format(TextScriptCommand._build_jump_id(params[i]))
-                else:
-                    s += '0x%X, ' % params[i]
+                # if 'jump' in name.lower() and i == 0:
+                #     s += '{}, '.format(TextScriptCommand._build_jump_id(params[i]))
+                # else:
+                s += '0x%X, ' % params[i]
             if params: s = s[:-2]
             s = s.rstrip()
             if s == '':
@@ -731,22 +731,8 @@ class TextScriptCommand:
             if len(param_sects) > 1:
                 s += '[\n'
 
-            last_param_byte_off = 0 # used to include potential dynamic data after last "parameter" argument
             for param_sect in param_sects:
-                byte_off, bit_off = CommandSections.get_parameter_offset(param_sect)
-                last_param_byte_off = byte_off
-                field_bit_size = int(param_sect['bits'])
-
-                # compute parameter value based on its offset and size
-                # print(byte_off, bit_off, field_bit_size)
-                val_bytes = command_bytes[byte_off:byte_off + max((field_bit_size // 8), 1)]
-                val = 0
-                for digit, b in enumerate(val_bytes):
-                    val |= (b << (8*digit))
-                val >>= bit_off
-                val &= 2**field_bit_size - 1 # mask by the size, 4 bits would mask 0x0F
-
-
+                param_value = TextScriptCommand._compute_parameter_value(param_sect, command_bytes)
                 param_name = CommandSections.get_parameter_name(param_sect)
                 if len(param_sects) > 1:
                     s += '\t\t{name}: '.format(name=param_name)
@@ -755,9 +741,9 @@ class TextScriptCommand:
 
                 # jump commands go to a linked script
                 if 'jump' in param_name.lower() or param_name == 'target':
-                    s += '{},'.format(TextScriptCommand._build_jump_id(val))
+                    s += '{},'.format(TextScriptCommand._build_jump_id(param_value))
                 else:
-                    s += '0x%X,' % val
+                    s += '0x%X,' % param_value
 
                 # if more than one argument, multi-line
                 if len(param_sects) > 1:
@@ -773,6 +759,27 @@ class TextScriptCommand:
             if s == '':
                 raise TextScriptException('invalid string output for %s' % unit)
             out += '\t' + s + '\n'
+        return out
+
+    @staticmethod
+    def _compute_parameter_value(param_sect: dict, command_bytes: bytes) -> int:
+        # compute parameter value based on its offset and size
+
+        byte_off, bit_off = CommandSections.get_parameter_offset(param_sect)
+        field_bit_size = int(param_sect['bits'])
+
+        # obtain the relevant bytes for the value
+        val_bytes = command_bytes[byte_off:byte_off + max((field_bit_size // 8), 1)]
+
+        out = 0
+        # combine bytes together
+        for digit, b in enumerate(val_bytes):
+            out |= (b << (8 * digit))
+
+        # mask value
+        out >>= bit_off
+        out &= 2 ** field_bit_size - 1  # mask by the size, 4 bits would mask 0x0F
+
         return out
 
     @staticmethod
